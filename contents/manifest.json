@@ -1,6 +1,6 @@
 {
   "name": "ニコ生アリーナ",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "manifest_version" : 2,
   "description": "[ニコニコ生放送]自動入場/自動枠移動/コミュニティ放送,チャンネル放送,タイムシフト,公式放送の一覧表示/通知など",
   "background" : {
@@ -9,7 +9,6 @@
 
   "homepage_url": "https://github.com/yonchu/niconama-arena",
 
-  // http://commons.nicovideo.jp/material/nc58317
   "icons": {
     "16": "icons/16.png",
     "48": "icons/48.png",
@@ -23,8 +22,6 @@
   ],
   "content_security_policy": "script-src 'self' https://ssl.google-analytics.com; object-src 'self'",
 
-  // Note: Because of bug 134315, you must declare any images you
-  // want to use with createNotification() as a web accessible resource.
   "web_accessible_resources": [
     "icons/48.png"
   ],

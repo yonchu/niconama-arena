@@ -1,16 +1,17 @@
 ニコ生アリーナ
---------------
+--------------------
 
 本ソースコードは、[Google Chromeの拡張](http://code.google.com/chrome/extensions/index.html) ニコ生アリーナのソースコードです。
 
 
-## 機能
+## 説明
 
 ニコ生アリーナは、[ニコニコ生放送](http://live.nicovideo.jp/)を便利に使うための拡張です。
 
-ただし、この拡張は原宿バージョンには対応していません。
+* ただし、この拡張は原宿バージョンには対応していません。
 
-主な機能は以下の通りです。
+
+## 主な機能は以下の通りです。
 
 - ニコ生自動入場
 - ニコ生自動枠移動
@@ -22,6 +23,21 @@
 - デスクトップ通知
 - 自動タブオープン
 - ニコ生閲覧履歴
+
+
+## スクリーンショット
+
+![favorite](https://raw.github.com/yonchu/niconama-arena/master/img/favorite.png)
+
+![ts](https://raw.github.com/yonchu/niconama-arena/master/img/ts.png)
+
+![official](https://raw.github.com/yonchu/niconama-arena/master/img/official.png)
+
+![history](https://raw.github.com/yonchu/niconama-arena/master/img/history.png)
+
+![settings](https://raw.github.com/yonchu/niconama-arena/master/img/settings.png)
+
+![autoenter](https://raw.github.com/yonchu/niconama-arena/master/img/auto_enter.png)
 
 
 ## 対応予定
@@ -39,31 +55,34 @@
 - 履歴保存時に毎回localStorageから呼び出さずキャッシュを持つ
 - 登録チャネルの放送予定
 
+現在、ベータ版として公開中です。
 その他、バグ報告や要望、ご指摘やアドバイスなどありましたら、遠慮なくお願いします。
 
-
-## スクリーンショット
-
-![favorite](https://raw.github.com/yonchu/niconama-arena/master/img/screenshot_favorite.png)
-
-![ts](https://raw.github.com/yonchu/niconama-arena/master/img/screenshot_ts.png)
-
-![official](https://raw.github.com/yonchu/niconama-arena/master/img/screenshot_official.png)
-
-![history](https://raw.github.com/yonchu/niconama-arena/master/img/screenshot_history.png)
-
-![settings](https://raw.github.com/yonchu/niconama-arena/master/img/screenshot_settings.png)
-
-![autoenter](https://raw.github.com/yonchu/niconama-arena/master/img/screenshot_auto_enter.png)
+また、正式版リリース時には広告が掲載される可能性があります。ご了承下さい。
 
 
-## その他
+## 変更履歴
+
+- 2013/04/20 v0.1.0 ベータ版リリース
+
+
+## See also
+
+ソースコードは以下にて、MITライセンスの元公開しています。
+
+- [yonchu/niconama-arena](https://github.com/yonchu/niconama-arena)
 
 アイコンはニコニココモンズよりお借りしました。ありがとうございます。
 
 - [niconicoアイコン黒 - ニコニ･コモンズ](http://commons.nicovideo.jp/material/nc58317)
 
 
-## See also
+## ライセンス
 
-- [yonchu/niconama-arena](https://github.com/yonchu/niconama-arena)
+ライセンスは、[MITライセンス](http://www.opensource.org/licenses/mit-license.php)に準拠します。
+参照元を記載の上、自己責任のもと自由に改変、利用してください。
+
+
+## Copyright
+
+Copyright (c) 2013 Yonchu.
