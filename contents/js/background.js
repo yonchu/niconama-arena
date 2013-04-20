@@ -1306,15 +1306,15 @@ BaseLiveData = (function() {
   };
 
   BaseLiveData.prototype.checkErrorPage = function($page) {
-    var $errorBox, cause, msg;
+    var $error_type, cause;
 
-    $errorBox = $page.find('#Error_Box');
-    if ($errorBox.length === 0) {
+    $error_type = $page.find('.error_type');
+    if (!$error_type.length) {
       return;
     }
-    msg = $errorBox.text().trim().replace(/\r\n?/g, '\n').replace(/\n/g, ' ').replace(/[ \t]+/g, '');
-    cause = $page.find('#Error_Box .error_type').text();
-    throw new Error("Cause: " + cause + "\n" + msg);
+    LOGGER.error($page);
+    cause = $error_type.text();
+    throw new Error("Cause: " + cause);
   };
 
   BaseLiveData.prototype.getValidData = function() {
@@ -1479,12 +1479,12 @@ Favorite = (function(_super) {
 
     try {
       $page = $($.parseHTML(this.transIMG(response)));
-      this.checkErrorPage($page);
       results = this.getResultsFromMypage($page);
-      this.updateComplete(results);
       if (!results || results.length === 0) {
+        this.checkErrorPage($page);
         LOGGER.info('No results', response);
       }
+      this.updateComplete(results);
     } catch (_error) {
       error = _error;
       this.updateError('Error in fetchFromMypageSuccess', error);
@@ -1576,10 +1576,10 @@ Timeshift = (function(_super) {
 
     try {
       $page = $($.parseHTML(this.transIMG(response)));
-      this.checkErrorPage($page);
       results = this.getResultsFromMypage($page);
       LOGGER.log("Fetch timeshift from mypage finish");
       if (!results || results.length === 0) {
+        this.checkErrorPage($page);
         LOGGER.info('No results', response);
       }
       this.fetchDetail(0, results);

@@ -929,14 +929,17 @@ class BaseLiveData
     return
 
   checkErrorPage: ($page) ->
-    $errorBox = $page.find('#Error_Box')
-    return if $errorBox.length is 0
-    msg = $errorBox.text()
-      .trim()
-      .replace(/\r\n?/g, '\n').replace(/\n/g,' ')
-      .replace(/[ \t]+/g,  '')
-    cause = $page.find('#Error_Box .error_type').text()
-    throw new Error "Cause: #{cause}\n#{msg}"
+    $error_type = $page.find '.error_type'
+    return unless $error_type.length
+    # $errorBox = $page.find('#Error_Box')
+    # msg = $errorBox.text()
+    #   .trim()
+    #   .replace(/\r\n?/g, '\n').replace(/\n/g,' ')
+    #   .replace(/[ \t]+/g,  '')
+    # cause = $page.find('#Error_Box .error_type').text()
+    LOGGER.error $page
+    cause = $error_type.text()
+    throw new Error "Cause: #{cause}"
 
   getValidData: ->
     if @cache
@@ -1055,11 +1058,11 @@ class Favorite extends BaseLiveData
   fetchFromMypageSuccess: (response) =>
     try
       $page = $($.parseHTML (@transIMG response))
-      @checkErrorPage $page
       results = @getResultsFromMypage $page
-      @updateComplete results
       if not results or results.length is 0
+        @checkErrorPage $page
         LOGGER.info 'No results', response
+      @updateComplete results
     catch error
       @updateError 'Error in fetchFromMypageSuccess', error
     results = null
@@ -1132,10 +1135,10 @@ class Timeshift extends BaseLiveData
   fetchFromMypageSuccess: (response) =>
     try
       $page = $($.parseHTML (@transIMG response))
-      @checkErrorPage $page
       results = @getResultsFromMypage $page
       LOGGER.log "Fetch timeshift from mypage finish"
       if not results or results.length is 0
+        @checkErrorPage $page
         LOGGER.info 'No results', response
       @fetchDetail 0, results
       @data = results
