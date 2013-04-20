@@ -27,15 +27,7 @@
 
 ## スクリーンショット
 
-![favorite](https://raw.github.com/yonchu/niconama-arena/master/img/favorite.png)
-
-![ts](https://raw.github.com/yonchu/niconama-arena/master/img/ts.png)
-
 ![official](https://raw.github.com/yonchu/niconama-arena/master/img/official.png)
-
-![history](https://raw.github.com/yonchu/niconama-arena/master/img/history.png)
-
-![settings](https://raw.github.com/yonchu/niconama-arena/master/img/settings.png)
 
 ![autoenter](https://raw.github.com/yonchu/niconama-arena/master/img/auto_enter.png)
 
