@@ -1,0 +1,56 @@
+{
+  "name": "ニコ生アリーナ",
+  "version": "0.0.1",
+  "manifest_version" : 2,
+  "description": "[ニコニコ生放送]自動入場/自動枠移動/コミュニティ放送,チャンネル放送,タイムシフト,公式放送の一覧表示/通知など",
+  "background" : {
+    "page" : "background.html"
+  },
+
+  "homepage_url": "https://github.com/yonchu/niconama-arena",
+
+  // http://commons.nicovideo.jp/material/nc58317
+  "icons": {
+    "16": "icons/16.png",
+    "48": "icons/48.png",
+    "128": "icons/128.png"
+  },
+
+  "permissions": [
+    "tabs",
+    "notifications",
+    "http://*.nicovideo.jp/"
+  ],
+  "content_security_policy": "script-src 'self' https://ssl.google-analytics.com; object-src 'self'",
+
+  // Note: Because of bug 134315, you must declare any images you
+  // want to use with createNotification() as a web accessible resource.
+  "web_accessible_resources": [
+    "icons/48.png"
+  ],
+
+  "browser_action": {
+    "default_icon": {
+      "19": "icons/19.png",
+      "38": "icons/38.png"
+    },
+    "default_title" : "ニコ生アリーナ",
+    "default_popup" : "html/popup.html"
+  },
+
+  "content_scripts": [{
+    "all_frames": false,
+    "run_at": "document_idle",
+    "matches": [
+      "http://live.nicovideo.jp/watch/*",
+      "http://live.nicovideo.jp/gate/*"
+    ],
+    "css": ["css/autojump.css"],
+    "js": [
+      "js/lib/jquery-1.8.3.min.js",
+      "js/debug.js",
+      "js/autojump.js",
+      "js/lib/ga.js"
+    ]
+  }]
+}

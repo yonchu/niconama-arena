@@ -1,0 +1,362 @@
+* {
+  margin: 0px;
+  padding: 0px;
+  color: #000;
+  background: none;
+}
+body {
+  font-size: 14px;
+  font-family: 'ヒラギノ角ゴ Pro W3','Hiragino Kaku Gothic ProN', Meiryo,'ＭＳ Ｐゴシック','MS PGothic',Osaka,Helvetica,Ubuntu,Arial,sans-serif;
+  margin: 2px;
+  width: 650px;
+}
+table {
+  font-size: inherit;
+  font: 100%;
+}
+a {
+  text-decoration: none;
+  cursor: auto;
+  color: #15C;
+  &:-webkit-any-link {
+    color: -webkit-link;
+  }
+  &:-webkit-any-link:hover {
+    text-decoration: underline;
+  }
+}
+button {
+  padding: 5px;
+  border-radius: 3px;
+  background: -webkit-gradient(linear, left top, left bottom, from(#fff), color-stop(0.01, #F1F1F1), color-stop(0.5, #F1F1F1), color-stop(0.99, #DFDFDF), to(#ccc));
+  &:hover {
+    background: -webkit-gradient(linear, left top, left bottom, from(#fff), color-stop(0.01, #e1e1e1), color-stop(0.5, #e1e1e1), color-stop(0.99, #cfcfcf), to(#ccc));
+  }
+}
+fieldset {
+  padding: 10px 15px 0px 15px;
+  border: 1px groove threedface;
+}
+legend {
+  font-weight: bold;
+  padding: 0px 5px;
+}
+input {
+  &[type="number"],&[type="text"] {
+    font-size: 100%;
+  }
+}
+
+
+.clear {
+  clear: both;
+}
+.clearfix:after {
+  content: '';
+  display: block;
+  clear: both;
+}
+
+/* .nowloading*/
+.nowloading {
+  display: table-cell;
+  width: 650px;
+  vertical-align: middle;
+  text-align: center;
+  font-size: 150%;
+  p {
+    color: gray;
+  }
+}
+
+
+/* #update-button */
+#update-button {
+  position: absolute;
+  right: 10px;
+  top: 4px;
+  padding: 2px;
+  &.active-button {
+    opacity: 0.8;
+  }
+  &.active-button:hover {
+    opacity: 1.0;
+    border: 1px solid gray;
+  }
+  &.inactive-button {
+    opacity: 0.3;
+  }
+}
+
+/* #tabbar */
+#tabbar > ul {
+  list-style: none;
+  li {
+    float: left;
+    cursor: pointer;
+    color: #999;
+    font-size: 105%;
+    line-height: 1.2;
+    text-align: center;
+    width: 80px;
+    height: 15px;
+    padding: 5px 5px;
+    background-color: #eee;
+    border-right: 1px solid #ccc;
+    border-top: 1px solid #ccc;
+    border-radius: 5px 5px 0px 0px;
+  }
+  li:first-child {
+    border-left: 1px solid #ccc;
+  }
+  li.active {
+    color: #000;
+    font-weight: bold;
+    margin-bottom: -1px;
+    border-bottom: 1px solid #fff;
+    background-color: #fff;
+  }
+  li:not(.active):hover {
+    background-color: #ddd;
+  }
+  .tab-badge {
+    position: relative;
+    top: -23px;
+    left: 65px;
+    background: #3382E6;
+    margin: 0px;
+    padding: 1px 0px 0px 0px;
+    width: 2em;
+    font-size: 75%;
+    color: #FFF;
+    border-radius: 5px;
+    display: none;
+  }
+}
+
+/* #tabs-content */
+#tabs-content {
+  clear: left;
+  padding: 10px 5px 10px 10px;
+  border-top: 1px solid #ccc;
+  & > div {
+    height: 400px;
+    overflow: auto;
+    &.inactive {
+        display: none;
+      }
+    &.live-list > ul li {
+      margin-bottom: 10px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #CCC;
+      &.closed .detail .status {
+        color: rgba(0, 0, 0, 0.6);
+        text-shadow: none
+      }
+    }
+  }
+  .thumnail {
+    float: left;
+    margin: 3px 10px 0px 0px;
+    width: 110px;
+    height: 80px;
+    img {
+      height: 100%;
+    }
+  }
+  .detail {
+    height: 85px;
+    overflow: hidden;
+    & > a {
+      font-weight: bold;
+    }
+    & > p {
+      &:nth-of-type(1) {
+        font-size: 85%;
+        font-weight: bold;
+        margin: 3px 0px;
+      }
+      &:nth-of-type(2) {
+        font-size: 70%;
+      }
+    }
+    .status {
+      color: rgba(255, 0, 0, 0.6);
+      font-weight: bold;
+      text-shadow: 1px 1px 1px #EBAEAE;
+      margin-left: 20px;
+    }
+  }
+}
+
+/* #favorite */
+#favorite > ul li {
+  .thumnail {
+    width: 80px;
+    height: 70px;
+  }
+  .detail {
+    height: 70px;
+    & > p:nth-of-type(2) {
+      font-size: 85%;
+    }
+  }
+}
+
+/* #timeshift */
+#timeshift > ul li {
+  .detail > p:nth-of-type(1) {
+    margin: 5px 0px 2px 0px;
+  }
+  .detail > p:nth-of-type(2) {
+    font-size: 85%;
+    color: rgba(255, 0, 0, 0.6);;
+    font-weight: bold;
+    text-shadow: 1px 1px 1px #EBAEAE;
+    margin-top: 3px;
+  }
+  &.reservation .detail > p:nth-of-type(2) {
+    color: #00a2ff;
+    text-shadow: none;
+  }
+  &.disable .detail > p:nth-of-type(2) {
+    color: gray;
+    text-shadow: none;
+  }
+}
+
+/* #history */
+#history {
+  font-size: 90%;
+  table {
+    border: none;
+    border-collapse: collapse;
+    border-spacing: 0;
+    caption {
+      display: none;
+    }
+    tbody tr:nth-child(even) {
+      background: rgba(0, 0, 255, 0.1);
+    }
+    tr {
+      line-height: 250%;
+      th {
+        padding: 5px;
+        border: none;
+        background: #D6D6D6;
+        font-weight: bold;
+        line-height: 120%;
+        text-align: center;
+        &:nth-of-type(3) {
+          width: 400px;
+        }
+        &:last-child {
+          padding-right: 30px;
+        }
+      }
+      td {
+        border: 1px #E3E3E3 solid;
+        min-width: 1px;
+        border: none;
+        text-align: left;
+        vertical-align: middle;
+        &:nth-of-type(1) {
+          padding-right: 15px;
+          padding-left: 5px;
+        }
+        &:nth-of-type(2) {
+          padding-right: 5px;
+        }
+        &:nth-of-type(3) p {
+          padding-right: 15px;
+          width: 400px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        img {
+          height: 15px;
+          vertical-align: middle;
+        }
+      }
+    }
+  }
+}
+
+/* #settings */
+div#settings {
+  overflow: visible;
+  font-size: 95%;
+  height: 353px;
+  .attension p {
+    color: gray;
+    font-size: 90%;
+  }
+  .ok-cancel-button {
+    text-align: center;
+    padding: 20px 0px 10px 5px;
+    button {
+      width: 70px;
+    }
+  }
+}
+
+#settings-content {
+  height: 100%;
+  overflow: auto;
+  padding: 0px 20px;
+  input[type="number"] {
+    width: 60px;
+    text-align: right;
+    padding-right: 5px;
+  }
+  & > fieldset {
+    margin-top: 15px;
+    &:first-child {
+      margin-top: 5px;
+    }
+    & > ul {
+      list-style-type: none;
+      li {
+        margin: 0px 0px 15px 0px;
+        & > div {
+          margin-left: 1em;
+        }
+        select {
+          margin-right: 10px;
+        }
+      }
+    }
+  }
+  .margin-left1 {
+    margin-left: 10px;
+  }
+  .margin-left2 {
+    margin-left: 20px;
+  }
+}
+
+#setting-opentab {
+  & > div > div {
+    margin-top: 10px;
+    label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    input {
+      width: 90%;
+    }
+  }
+}
+
+#settings-status {
+  display: none;
+  position: absolute;
+  right: 100px;
+  bottom: 10px;
+  color: #808080;
+  &.failure {
+    color: red;
+  }
+}
+

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="Pragma" content="no-cache">
+  <link rel="stylesheet" type="text/css" href="/css/popup.css" />
+  <script type="text/javascript" src="/js/lib/jquery-1.8.3.min.js"></script>
+  <script type="text/javascript" src="/js/debug.js"></script>
+  <script type="text/javascript" src="/js/popup-tmpl.js"></script>
+  <script type="text/javascript" src="/js/popup.js"></script>
+</head>
+<body>
+  <div id="tabbar">
+    <ul>
+      <li data-id="favorite">お気に入り<div class="tab-badge"></div></li>
+      <li data-id="timeshift">TS<div class="tab-badge"></div></li>
+      <li data-id="official">公式<div class="tab-badge"></div></li>
+      <li data-id="history">履歴</li>
+      <li data-id="settings">設定</li>
+    </ul>
+    <input id="update-button" class='active-button' type="image" value="update" src="/icons/reload.gif" />
+  </div>
+  <div id="tabs-content">
+    <div id="favorite" class="live-list">
+      <ul>
+      </ul>
+    </div>
+
+    <div id="timeshift" class="live-list">
+      <ul>
+      </ul>
+    </div>
+
+    <div id="official" class="live-list">
+      <ul>
+      </ul>
+    </div>
+
+    <div id="history">
+      <table border="">
+        <caption>
+          <strong>ニコ生視聴履歴</strong>
+          <details>
+            <summary>説明</summary>
+            ニコ生視聴履歴(最新100件)を閲覧することができます。
+          </details>
+        </caption>
+        <thead>
+          <tr><th>アクセス日時</th><th></th><th>タイトル</th><th>開始時間</th></tr>
+        </thead>
+        <tbody id="history-content">
+        </tbody>
+      </table>
+    </div>
+
+    <div id="settings">
+      <div id="settings-content">
+        <fieldset>
+          <legend>自動入場/次枠移動</legend>
+          <ul>
+            <li>
+              <input type="checkbox" id="setting-auto-jump" /> 自動枠移動
+              <label class="margin-left2" >チェック間隔(5〜): </label>
+              <input type="number" id="setting-auto-jump-interval" /> 秒
+            </li>
+            <li>
+              <input type="checkbox" id="setting-auto-enter" /> 自動入場
+            </li>
+          </ul>
+        </fieldset>
+
+        <fieldset>
+          <legend>ニコ生表示</legend>
+          <ul>
+            <li id="setting-niconama-enabled">
+              <label>有効にする機能(次回起動時に反映):</label><br />
+              <div>
+                <input type="checkbox" name="favorite" /> お気に入り
+                <input type="checkbox" name="timeshift" class="margin-left1" /> タイムシフト
+                <input type="checkbox" name="official" class="margin-left1" /> 公式
+                <input type="checkbox" name="history" class="margin-left1" /> 履歴
+              </div>
+            </li>
+
+            <li id="setting-niconama-update">
+              <label>自動更新間隔: </label>
+              <select name="interval">
+                <option value="0">無効</option>
+                <option value="300">5分</option>
+                <option value="600">10分</option>
+                <option value="1800">30分</option>
+                <option value="36000">60分</option>
+              </select>
+            </li>
+
+            <li id="setting-badge">
+              <label>バッジ表示:</label><br />
+              <div>
+                <label>お気に入り:</label>
+                <select name="favorite">
+                  <option value="disable">無効</option>
+                  <option value="before">開場5分前</option>
+                  <option value="gate">開場済み</option>
+                  <option value="onair">開演済み</option>
+                </select>
+                <label>タイムシフト:</label>
+                <select name="timeshift">
+                  <option value="disable">無効</option>
+                  <option value="before">開場5分前</option>
+                  <option value="gate">開場済み</option>
+                  <option value="onair">開演済み</option>
+                </select>
+                <label>公式:</label>
+                <select name="official">
+                  <option value="disable">無効</option>
+                  <option value="onair">開演済み</option>
+                </select>
+              </div>
+            </li>
+
+            <li id="setting-notification">
+              <label>通知:</label><br />
+              <div>
+                <label>お気に入り:</label>
+                <select name="favorite">
+                  <option value="disable">無効</option>
+                  <option value="before">開場5分前</option>
+                  <option value="gate">開場</option>
+                  <option value="onair">開演</option>
+                </select>
+                <label>タイムシフト:</label>
+                <select name="timeshift">
+                  <option value="disable">無効</option>
+                  <option value="before">開場5分前</option>
+                  <option value="gate">開場</option>
+                  <option value="onair">開演</option>
+                </select>
+                <label>公式:</label>
+                <select name="official">
+                  <option value="disable">無効</option>
+                  <option value="onair">開演</option>
+                </select>
+              </div>
+            </li>
+
+            <li id="setting-opentab">
+              <label>自動タブオープン:</label><br />
+              <div>
+                <label>お気に入り:</label>
+                <select name="favorite">
+                  <option value="disable">無効</option>
+                  <option value="before">開場5分前</option>
+                  <option value="gate">開場</option>
+                  <option value="onair">開演</option>
+                </select>
+                <label>タイムシフト:</label>
+                <select name="timeshift">
+                  <option value="disable">無効</option>
+                  <option value="before">開場5分前</option>
+                  <option value="gate">開場</option>
+                  <option value="onair">開演</option>
+                </select>
+                <label>公式:</label>
+                <select name="official">
+                  <option value="disable">無効</option>
+                  <option value="onair">開演</option>
+                </select>
+                <div>
+                  <label>除外設定:</label>
+                  <input type="text" />
+                </div>
+              </div>
+            </li>
+
+            <li class="attension">
+              <p>※ 通知/自動タブオープンは2分程度前後します(そのうち対応するかも)</p>
+            </li>
+          </ul>
+        </fieldset>
+
+        <fieldset>
+          <legend>見ため</legend>
+          <ul id="setting-apperance">
+            <li id="setting-theme">
+              <label>テーマ: </label>
+              <input type="radio" checked="true" class="margin-left1" /> 白
+            </li>
+            <li id="setting-height">
+              <label>縦: 未実装</label>
+              <!--スライダー -->
+            </li>
+            <li id="setting-width">
+              <label>横: 未実装</label>
+              <!--スライダー -->
+            </li>
+          </ul>
+        </fieldset>
+      </div>
+      <div class="ok-cancel-button">
+        <button type="button" value="ok">OK</button>
+        <button type="button" value="cancel">Cancel</button>
+        <span id="settings-status"></span>
+      </div>
+    </div>
+  </div>
+  <script type="text/javascript" src="/js/lib/ga.js"></script>
+</body>
+</html>

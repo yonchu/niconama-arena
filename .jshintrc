@@ -1,0 +1,29 @@
+{
+  "strict": false,
+  "indent": 2,
+  "unused": true,
+
+  "undef": true,
+  "browser": true,
+  "jquery": true,
+  "devel": true,
+  "debug": true,
+
+  "eqnull": true,
+  "expr": true,
+
+  "curly": true,
+  "eqeqeq": true,
+  "immed": true,
+  "latedef": true,
+  "newcap": true,
+  "noarg": true,
+  "sub": true,
+  "boss": true,
+  "globals": {
+      "jQuery": true,
+      "console": true,
+      "module": true
+  }
+}
+

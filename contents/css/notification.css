@@ -1,0 +1,43 @@
+* {
+  margin: 0px;
+  padding: 0px;
+  color: #000;
+  background: none;
+}
+body {
+  font-size: 12px;
+  font-family: 'ヒラギノ角ゴ Pro W3', 'Hiragino Kaku Gothic ProN', Meiryo, 'ＭＳ Ｐゴシック', 'MS PGothic', Osaka, Helvetica, Ubuntu, Arial, sans-serif;
+  margin: 10px 5px 0px 5px;
+}
+a {
+  color: #15C;
+  cursor: auto;
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+#thumnail {
+  float: left;
+  margin-right: 10px;
+}
+#thumnail img {
+  width: 90px;
+}
+#title {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+#open-time,
+#start-time {
+  font-weight: bold;
+}
+#status {
+  color: rgba(255, 0, 0, 0.6);
+  font-weight: bold;
+  text-shadow: 1px 1px 1px #EBAEAE;
+  margin: 3px 0px;
+}
+#detail {
+  overflow: hidden;
+}
