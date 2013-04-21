@@ -231,7 +231,7 @@ class LiveInfoHtml
       else if openTime and @now > openTime
         # open gate
         status = 'まもなく放送開始'
-      else if openTime and @now > openTime - LiveInfoHtml.BEFORE_TIME_SEC
+      else if openTime and @now > openTime - LiveInfoHtml.BEFORE_TIME_SEC * 1000
         # before open gate
         status = 'まもなく開場'
     # Set status.

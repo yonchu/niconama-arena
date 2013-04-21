@@ -1366,7 +1366,7 @@ BaseLiveData = (function() {
       onair: []
     };
     if (items.length === 0) {
-      LOGGER.log("No notification data " + this.id);
+      LOGGER.log("No data " + this.id + " for notification");
       return results;
     }
     now = (new Date).getTime();
@@ -1421,11 +1421,11 @@ BaseLiveData = (function() {
     if (this.isLiveClosed(item, now)) {
       return false;
     }
-    if (this.isLiveOnair(item, now)) {
+    if (this.isLiveOpenGate(item, now)) {
       return true;
     }
     openTime = (_ref = item.openTime) != null ? _ref.getTime() : void 0;
-    if (openTime && now > openTime - beforeTimeSec) {
+    if (openTime && now > openTime - beforeTimeSec * 1000) {
       return true;
     }
     return false;

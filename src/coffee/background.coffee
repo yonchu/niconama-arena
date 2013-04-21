@@ -979,7 +979,7 @@ class BaseLiveData
     items = @getValidData()
     results = {before:[], gate: [], onair: []}
     if items.length is 0
-      LOGGER.log "No notification data #{@id}"
+      LOGGER.log "No data #{@id} for notification"
       return results
     now = (new Date).getTime()
     for item in items
@@ -1010,10 +1010,10 @@ class BaseLiveData
 
   isLiveBeforeOpenGate: (item, now, beforeTimeSec) ->
     return false if @isLiveClosed item, now
-    return true if @isLiveOnair item, now
+    return true if @isLiveOpenGate item, now
     openTime = item.openTime?.getTime()
     # before open gate
-    return true if openTime and now > openTime - beforeTimeSec
+    return true if openTime and now > openTime - beforeTimeSec * 1000
     return false
 
   isLiveClosed: (item, now) ->

@@ -314,7 +314,7 @@
           status = 'ただいま放送中';
         } else if (openTime && this.now > openTime) {
           status = 'まもなく放送開始';
-        } else if (openTime && this.now > openTime - LiveInfoHtml.BEFORE_TIME_SEC) {
+        } else if (openTime && this.now > openTime - LiveInfoHtml.BEFORE_TIME_SEC * 1000) {
           status = 'まもなく開場';
         }
       }
