@@ -77,6 +77,7 @@
         tab.tabNum = i;
         tab.$tab = $tab;
         tab.$tabContent = $tabContent;
+        tab.init();
         this.tabs[i] = tab;
       }
       $("#tabs-content").append(Popup.LOADING_VIEW);
@@ -121,7 +122,7 @@
         tmpTab.isActive = false;
       }
       tab.isActive = true;
-      tab.init();
+      tab.showTab();
       this.setLastUpdateTime(tab.tabId);
     };
 
@@ -179,8 +180,9 @@
       _ref = this.tabs;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         tab = _ref[_i];
+        tab.init();
         if (tab.isActive) {
-          tab.init();
+          this.showTab(tab.tabNum);
         }
       }
       setTimeout(function() {
@@ -204,21 +206,22 @@
     function BaseTab(tabId, config) {
       this.tabId = tabId;
       this.config = config;
-      this.init = __bind(this.init, this);
       this.addEventListeners();
     }
 
     BaseTab.prototype.addEventListeners = function() {};
 
-    BaseTab.prototype.init = function() {
+    BaseTab.prototype.init = function() {};
+
+    BaseTab.prototype.showTab = function() {
       this.$tab.addClass('active').siblings().removeClass('active');
       this.beforeShowTab();
-      if (this.showTab()) {
+      if (this._showTab()) {
         this.afterShowTab();
       }
     };
 
-    BaseTab.prototype.showTab = function() {
+    BaseTab.prototype._showTab = function() {
       return true;
     };
 
@@ -362,17 +365,22 @@
       return this.nicoInfo.isUpdated(this.tabId);
     };
 
+    LiveTab.prototype.countBadge = function() {
+      return this.nicoInfo.countBadge(this.tabId);
+    };
+
     LiveTab.prototype.checkUpdate = function() {
+      this.showTabBadge(this.countBadge());
       if (this.updateView()) {
         this.afterShowTab();
       }
     };
 
-    LiveTab.prototype.countBadge = function() {
-      return this.nicoInfo.countBadge(this.tabId);
+    LiveTab.prototype.init = function() {
+      this.showTabBadge(this.countBadge());
     };
 
-    LiveTab.prototype.showTab = function() {
+    LiveTab.prototype._showTab = function() {
       return this.updateView(true);
     };
 
@@ -382,7 +390,6 @@
       if (force == null) {
         force = false;
       }
-      this.showTabBadge(this.countBadge());
       if (!this.isActive) {
         LOGGER.log("Cancel updateView: not active " + this.tabId);
         return false;
@@ -470,7 +477,7 @@
 
     HistoryTab.prototype.addEventListeners = function() {};
 
-    HistoryTab.prototype.showTab = function() {
+    HistoryTab.prototype._showTab = function() {
       this.showHistory();
       return true;
     };
@@ -532,7 +539,7 @@
       $('#settings button[value="cancel"]').on('click', this.onClickCancelButton);
     };
 
-    SettingsTab.prototype.showTab = function() {
+    SettingsTab.prototype._showTab = function() {
       this.restoreSettings();
       return true;
     };

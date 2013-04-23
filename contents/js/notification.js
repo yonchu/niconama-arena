@@ -5,6 +5,8 @@
   LOGGER = new Logger;
 
   Notification = (function() {
+    Notification.BEFORE_TIME_SEC = 300;
+
     function Notification() {
       var _this = this;
 
@@ -102,7 +104,7 @@
           text = 'ただいま放送中';
         } else if (openTime && now > openTime) {
           text = 'まもなく放送開始';
-        } else if (openTime && now > openTime - LiveInfoHtml.BEFORE_TIME_SEC) {
+        } else if (openTime && now > openTime - Notification.BEFORE_TIME_SEC * 1000) {
           text = 'まもなく開場';
         }
       }

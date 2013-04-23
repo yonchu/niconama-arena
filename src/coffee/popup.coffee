@@ -55,6 +55,7 @@ class Popup
       tab.tabNum = i
       tab.$tab = $tab
       tab.$tabContent = $tabContent
+      tab.init()
       @tabs[i] = tab
     # Append loading view.
     $("#tabs-content").append Popup.LOADING_VIEW
@@ -86,7 +87,7 @@ class Popup
       continue unless tmpTab
       tmpTab.isActive = false
     tab.isActive = true
-    tab.init()
+    tab.showTab()
     @setLastUpdateTime(tab.tabId)
     return
 
@@ -125,8 +126,9 @@ class Popup
     chrome.browserAction.setBadgeText text: ''
     @nicoInfo.updateAll true, false
     for tab in @tabs
+      tab.init()
       if tab.isActive
-        tab.init()
+        @showTab tab.tabNum
     setTimeout(=>
       @$updateButton.attr 'class', 'active-button'
       return
@@ -146,14 +148,17 @@ class BaseTab
   addEventListeners: ->
     return
 
-  init: =>
-    @$tab.addClass('active').siblings().removeClass 'active'
-    @beforeShowTab()
-    if @showTab()
-      @afterShowTab()
+  init: ->
     return
 
   showTab: ->
+    @$tab.addClass('active').siblings().removeClass 'active'
+    @beforeShowTab()
+    if @_showTab()
+      @afterShowTab()
+    return
+
+  _showTab: ->
     return true
 
   beforeShowTab: ->
@@ -266,21 +271,28 @@ class LiveTab extends BaseTab
       @nicoInfo.isUpdated @tabId, value
     return @nicoInfo.isUpdated @tabId
 
+  countBadge: ->
+    return @nicoInfo.countBadge @tabId
+
   checkUpdate: =>
+    # Set tab badge.
+    @showTabBadge @countBadge()
     if @updateView()
       @afterShowTab()
     return
 
-  countBadge: ->
-    return @nicoInfo.countBadge @tabId
+  # override
+  init: ->
+    # Set tab badge.
+    @showTabBadge @countBadge()
+    return
 
-  showTab: ->
+  # override
+  _showTab: ->
     return @updateView true
 
   updateView: (force=false) ->
     # LOGGER.log "updateView #{@tabId}"
-    # Set tab badge.
-    @showTabBadge @countBadge()
 
     unless @isActive
       LOGGER.log "Cancel updateView: not active #{@tabId}"
@@ -340,7 +352,8 @@ class HistoryTab extends BaseTab
   addEventListeners: ->
     return
 
-  showTab: ->
+  # override
+  _showTab: ->
     @showHistory()
     return true
 
@@ -387,7 +400,8 @@ class SettingsTab extends BaseTab
     $('#settings button[value="cancel"]').on 'click', @onClickCancelButton
     return
 
-  showTab: ->
+  # override
+  _showTab: ->
     @restoreSettings()
     return true
 
