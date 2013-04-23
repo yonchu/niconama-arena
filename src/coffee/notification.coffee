@@ -1,6 +1,8 @@
 LOGGER = new Logger
 
 class Notification
+  @BEFORE_TIME_SEC: 300
+
   constructor: ->
     @liveChecker = chrome.extension.getBackgroundPage().liveChecker
     $ =>
@@ -76,7 +78,7 @@ class Notification
       else if openTime and now > openTime
         # open gate
         text = 'まもなく放送開始'
-      else if openTime and now > openTime - LiveInfoHtml.BEFORE_TIME_SEC
+      else if openTime and now > openTime - Notification.BEFORE_TIME_SEC * 1000
         # before open gate
         text = 'まもなく開場'
     # Set status.
