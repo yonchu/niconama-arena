@@ -7,8 +7,6 @@
     "page" : "background.html"
   },
 
-  "homepage_url": "https://github.com/yonchu/niconama-arena",
-
   "icons": {
     "16": "icons/16.png",
     "48": "icons/48.png",
