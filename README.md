@@ -1,10 +1,71 @@
 ニコ生アリーナ
 --------------------
 
-本ソースコードは、[Google Chromeの拡張](http://code.google.com/chrome/extensions/index.html) ニコ生アリーナのソースコードです。
+This source code is for [Google Chrome Extension](http://code.google.com/chrome/extensions/index.html) "niconama-arena".
+
+- [Chrome ウェブストア - ニコ生アリーナ](https://chrome.google.com/webstore/detail/%E3%83%8B%E3%82%B3%E7%94%9F%E3%82%A2%E3%83%AA%E3%83%BC%E3%83%8A/lkkpfmnibpgpmhbkjgldlmonaphmoobl)
+
+## Usage
+
+Installation.
+
+```console
+$ make install
+```
+
+Development build.
+
+```console
+$ make [build]
+```
+
+## Release procedure
+
+Bump up to version number.
+
+```console
+$ $EDITOR contents/manifest.json
+"version": "x.x.x" => "version": "y.y.y"
+```
+
+Write change log to README.
+
+```console
+$ $EDITOR README.md
+```
+
+Release build.
+
+```console
+$ make release
+```
+
+Release commit.
+
+```
+$ git ca -m 'Release ver.x.x.x'
+$ git tag -a x.x.x -m "Release ver.x.x.x"
+$ git push && git push --tags
+```
+
+Upload niconama-arena.zip to Web store and write change log in explanations.
+
+- [デベロッパー ダッシュボード - Chrome ウェブストア](https://chrome.google.com/webstore/developer/dashboard)
 
 
-## 説明
+## License
+
+ライセンスは、[MITライセンス](http://www.opensource.org/licenses/mit-license.php)に準拠します。
+参照元を記載の上、自己責任のもと自由に改変、利用してください。
+
+
+## Copyright
+
+Copyright (c) 2013 Yonchu.
+
+
+Web Store の説明
+--------------------
 
 ニコ生アリーナは、[ニコニコ生放送](http://live.nicovideo.jp/)を便利に使うための拡張です。
 
@@ -35,8 +96,6 @@
 ## 対応予定
 
 - 通知/自動タブオープンを時間に厳密にする
-- アニメ一挙の表示
-- 自動オープンの例外設定 (UI改善 + 公式やTSは画面からON/OFF可能にする)
 - 設定を規定値に戻す
 - Gateページが存在しない場合の対応
 - Locale (en/ja)
@@ -45,8 +104,12 @@
 - 共通処理の抜き出し(名前空間/common.js)
 - 一部、開場/開演日時の取得が年をまたぐ場合に対応していない
 - 履歴保存時に毎回localStorageから呼び出さずキャッシュを持つ
-- 登録チャネルの放送予定
+
+- 自動オープンの例外設定 (UI改善)
+- 公式番組は一覧画面から番組毎に自動タブオープンをON/OFF可能にする
 - 放送中/放送予定ニコ生検索タブ
+- 登録チャネルの放送予定
+- アニメ一挙の表示
 
 現在、ベータ版として公開中です。
 その他、バグ報告や要望、ご指摘やアドバイスなどありましたら、遠慮なくお願いします。
@@ -70,14 +133,3 @@
 アイコンはニコニココモンズよりお借りしました。ありがとうございます。
 
 - [niconicoアイコン黒 - ニコニ･コモンズ](http://commons.nicovideo.jp/material/nc58317)
-
-
-## ライセンス
-
-ライセンスは、[MITライセンス](http://www.opensource.org/licenses/mit-license.php)に準拠します。
-参照元を記載の上、自己責任のもと自由に改変、利用してください。
-
-
-## Copyright
-
-Copyright (c) 2013 Yonchu.
