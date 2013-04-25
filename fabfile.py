@@ -8,6 +8,14 @@ from fabric.colors import green
 
 
 @task
+def install():
+    print(green('Install node_modules with npm ...'))
+    local('npm install')
+    print(green('Install components with bower ...'))
+    local('bower install')
+
+
+@task
 def build():
     build_tmpl()
     print(green('Compile main coffeescript/less files with grunt...'))
@@ -47,3 +55,5 @@ def clean_all():
     local('grunt clean')
     print(green('Clean *.pyc, node_modules...'))
     local('rm -r *.pyc node_modules')
+    print(green('Remove release archive...'))
+    local('rm -f niconama-arena.zip')

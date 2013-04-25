@@ -1,6 +1,12 @@
-/node_modules
 /niconama-arena.zip
+
+/node_modules
+
+/contents/js/lib/vendor/*
+
 /contents/compress/*
 /contents/js/**/*.map
+
 *.pyc
+
 !.gitkeep

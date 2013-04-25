@@ -13,7 +13,6 @@ module.exports = (grunt) ->
     'debug.coffee'
   ]
   reTrimCwd = new RegExp '^src/coffee/'
-  reJquery = new RegExp '\/lib\/jquery-.*\.js$'
 
   grunt.initConfig
     pkg: grunt.file.readJSON 'package.json'
@@ -84,7 +83,7 @@ module.exports = (grunt) ->
             src: ['**/*.js'],
             dest: compressJsDir,
             filter: (path) ->
-              return not (path.match reJquery)
+              return not (path.match 'js/lib/vendor/')
         ]
 
     watch:
@@ -112,7 +111,6 @@ module.exports = (grunt) ->
       js:
         src: [
           "#{destJsDir}**/*.js",
-          "#{destJsDir}**/*.map"
         ],
         filter: (path) ->
           return not (path.match '/lib/')
@@ -120,6 +118,8 @@ module.exports = (grunt) ->
         src: [
           "#{destJsDir}**/*.map"
         ],
+        filter: (path) ->
+          return not (path.match '/lib/vendor/')
       compress:
         src: [
           "#{compressJsDir}**/*.js",

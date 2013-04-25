@@ -1,0 +1,10 @@
+{
+  "name": "niconama-arena",
+  "version": "0.1.2",
+  "ignore": [
+    "node_modules"
+  ],
+  "dependencies": {
+    "jquery": "1.8"
+  }
+}
