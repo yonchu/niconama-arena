@@ -3,8 +3,14 @@
 
 from __future__ import print_function
 
-from fabric.api import local, task, lcd
-from fabric.colors import green
+from fabric.api import local, task, lcd, abort
+from fabric.colors import green, yellow
+
+import json
+
+
+MANIFEST = 'contents/manifest.json'
+CONFIG_FILES = ['package.json', 'component.json']
 
 
 @task
@@ -23,6 +29,21 @@ def build():
 
 
 @task
+def bump_up_version():
+    print(green('Bump up version number ...'))
+    version = None
+    with open(MANIFEST) as f:
+        j = json.load(f)
+        version = j['version']
+    if not version:
+        abort('Version is not found in {}'.format(MANIFEST))
+    print(yellow('Change version to "{}".'.format(version)))
+    for fname in CONFIG_FILES:
+        local('sed -i "" -e \'s/"version": *"\([0-9.]*\)"/'
+              + '"version": "{}"/\' {}'.format(version, fname))
+
+
+@task
 def build_tmpl():
     print(green('Compile coffeescript files for template...'))
     local('coffee -clb scripts/compile-tmpl.coffee')
@@ -34,6 +55,7 @@ def build_tmpl():
 
 @task
 def release():
+    bump_up_version()
     build_tmpl()
     print(green('Compile main coffeescript/less files with grunt...'))
     local('grunt build')
