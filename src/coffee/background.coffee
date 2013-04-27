@@ -523,7 +523,7 @@ class LiveChecker
         for item in n.before
           continue if item.commuId and item.commuId in blacklist
           if @openTabHistory[item.id]
-            if 'before' in @openTabHistory[item.id]
+            unless 'before' in @openTabHistory[item.id]
               @openTabHistory[item.id].push 'before'
             continue
           @openTabHistory[item.id] = []
@@ -533,7 +533,7 @@ class LiveChecker
         for item in n.gate
           continue if item.commuId and item.commuId in blacklist
           if @openTabHistory[item.id]
-            if 'gate' in @openTabHistory[item.id]
+            unless 'gate' in @openTabHistory[item.id]
               @openTabHistory[item.id].push 'gate'
             continue
           @openTabHistory[item.id] = []
@@ -543,7 +543,7 @@ class LiveChecker
         for item in n.onair
           continue if item.commuId and item.commuId in blacklist
           if @openTabHistory[item.id]
-            if 'onair' in @openTabHistory[item.id]
+            unless 'onair' in @openTabHistory[item.id]
               @openTabHistory[item.id].push 'onair'
             continue
           @openTabHistory[item.id] = []
@@ -605,25 +605,31 @@ class LiveChecker
       isOnairEnabled = @config.isOnairNotificationEnabled liveData.id
       if isBeforeEnabled
         for item in n.before
-          @notificationHistory[item.id] or= []
-          if 'before' in @notificationHistory[item.id]
+          if @notificationHistory[item.id]
+            unless 'before' in @notificationHistory[item.id]
+              @notificationHistory[item.id].push 'before'
             continue
-          @notificationTargets.push item
+          @notificationHistory[item.id] = []
           @notificationHistory[item.id].push 'before'
+          @notificationTargets.push item
       if isBeforeEnabled or isGateEnabled
         for item in n.gate
-          @notificationHistory[item.id] or= []
-          if 'gate' in @notificationHistory[item.id]
+          if @notificationHistory[item.id]
+            unless 'gate' in @notificationHistory[item.id]
+              @notificationHistory[item.id].push 'gate'
             continue
-          @notificationTargets.push item
+          @notificationHistory[item.id] = []
           @notificationHistory[item.id].push 'gate'
+          @notificationTargets.push item
       if isBeforeEnabled or isGateEnabled or isOnairEnabled
         for item in n.onair
-          @notificationHistory[item.id] or= []
-          if 'onair' in @notificationHistory[item.id]
+          if @notificationHistory[item.id]
+            unless 'onair' in @notificationHistory[item.id]
+              @notificationHistory[item.id].push 'onair'
             continue
-          @notificationTargets.push item
+          @notificationHistory[item.id] = []
           @notificationHistory[item.id].push 'onair'
+          @notificationTargets.push item
     # TODO Remove unnecessary history.
     LOGGER.log "Notify: total #{@notificationTargets.length}", @notificationTargets
     liveDataList = null
