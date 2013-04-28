@@ -727,7 +727,7 @@ LiveChecker = (function() {
             continue;
           }
           if (this.openTabHistory[item.id]) {
-            if (__indexOf.call(this.openTabHistory[item.id], 'before') >= 0) {
+            if (__indexOf.call(this.openTabHistory[item.id], 'before') < 0) {
               this.openTabHistory[item.id].push('before');
             }
             continue;
@@ -745,7 +745,7 @@ LiveChecker = (function() {
             continue;
           }
           if (this.openTabHistory[item.id]) {
-            if (__indexOf.call(this.openTabHistory[item.id], 'gate') >= 0) {
+            if (__indexOf.call(this.openTabHistory[item.id], 'gate') < 0) {
               this.openTabHistory[item.id].push('gate');
             }
             continue;
@@ -763,7 +763,7 @@ LiveChecker = (function() {
             continue;
           }
           if (this.openTabHistory[item.id]) {
-            if (__indexOf.call(this.openTabHistory[item.id], 'onair') >= 0) {
+            if (__indexOf.call(this.openTabHistory[item.id], 'onair') < 0) {
               this.openTabHistory[item.id].push('onair');
             }
             continue;
@@ -834,7 +834,7 @@ LiveChecker = (function() {
   };
 
   LiveChecker.prototype.setNotificationTargets = function() {
-    var isBeforeEnabled, isGateEnabled, isOnairEnabled, item, liveData, liveDataList, n, _base, _base1, _base2, _i, _j, _k, _l, _len, _len1, _len2, _len3, _name, _name1, _name2, _ref, _ref1, _ref2;
+    var isBeforeEnabled, isGateEnabled, isOnairEnabled, item, liveData, liveDataList, n, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2;
 
     if (this.notificationTargets) {
       LOGGER.log('Cancel notification (now notifying)');
@@ -852,36 +852,45 @@ LiveChecker = (function() {
         _ref = n.before;
         for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
           item = _ref[_j];
-          (_base = this.notificationHistory)[_name = item.id] || (_base[_name] = []);
-          if (__indexOf.call(this.notificationHistory[item.id], 'before') >= 0) {
+          if (this.notificationHistory[item.id]) {
+            if (__indexOf.call(this.notificationHistory[item.id], 'before') < 0) {
+              this.notificationHistory[item.id].push('before');
+            }
             continue;
           }
-          this.notificationTargets.push(item);
+          this.notificationHistory[item.id] = [];
           this.notificationHistory[item.id].push('before');
+          this.notificationTargets.push(item);
         }
       }
       if (isBeforeEnabled || isGateEnabled) {
         _ref1 = n.gate;
         for (_k = 0, _len2 = _ref1.length; _k < _len2; _k++) {
           item = _ref1[_k];
-          (_base1 = this.notificationHistory)[_name1 = item.id] || (_base1[_name1] = []);
-          if (__indexOf.call(this.notificationHistory[item.id], 'gate') >= 0) {
+          if (this.notificationHistory[item.id]) {
+            if (__indexOf.call(this.notificationHistory[item.id], 'gate') < 0) {
+              this.notificationHistory[item.id].push('gate');
+            }
             continue;
           }
-          this.notificationTargets.push(item);
+          this.notificationHistory[item.id] = [];
           this.notificationHistory[item.id].push('gate');
+          this.notificationTargets.push(item);
         }
       }
       if (isBeforeEnabled || isGateEnabled || isOnairEnabled) {
         _ref2 = n.onair;
         for (_l = 0, _len3 = _ref2.length; _l < _len3; _l++) {
           item = _ref2[_l];
-          (_base2 = this.notificationHistory)[_name2 = item.id] || (_base2[_name2] = []);
-          if (__indexOf.call(this.notificationHistory[item.id], 'onair') >= 0) {
+          if (this.notificationHistory[item.id]) {
+            if (__indexOf.call(this.notificationHistory[item.id], 'onair') < 0) {
+              this.notificationHistory[item.id].push('onair');
+            }
             continue;
           }
-          this.notificationTargets.push(item);
+          this.notificationHistory[item.id] = [];
           this.notificationHistory[item.id].push('onair');
+          this.notificationTargets.push(item);
         }
       }
     }
@@ -1482,7 +1491,7 @@ Favorite = (function(_super) {
       results = this.getResultsFromMypage($page);
       if (!results || results.length === 0) {
         this.checkErrorPage($page);
-        LOGGER.info('No results', response);
+        LOGGER.log('No results', response);
       }
       this.updateComplete(results);
     } catch (_error) {
@@ -1580,7 +1589,7 @@ Timeshift = (function(_super) {
       LOGGER.log("Fetch timeshift from mypage finish");
       if (!results || results.length === 0) {
         this.checkErrorPage($page);
-        LOGGER.info('No results', response);
+        LOGGER.log('No results', response);
       }
       this.fetchDetail(0, results);
       this.data = results;

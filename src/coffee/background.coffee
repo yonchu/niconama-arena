@@ -1067,7 +1067,7 @@ class Favorite extends BaseLiveData
       results = @getResultsFromMypage $page
       if not results or results.length is 0
         @checkErrorPage $page
-        LOGGER.info 'No results', response
+        LOGGER.log 'No results', response
       @updateComplete results
     catch error
       @updateError 'Error in fetchFromMypageSuccess', error
@@ -1145,7 +1145,7 @@ class Timeshift extends BaseLiveData
       LOGGER.log "Fetch timeshift from mypage finish"
       if not results or results.length is 0
         @checkErrorPage $page
-        LOGGER.info 'No results', response
+        LOGGER.log 'No results', response
       @fetchDetail 0, results
       @data = results
       results = null
