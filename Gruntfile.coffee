@@ -138,6 +138,7 @@ module.exports = (grunt) ->
   grunt.loadNpmTasks 'grunt-contrib-watch'
   grunt.loadNpmTasks 'grunt-contrib-jshint'
   grunt.loadNpmTasks 'grunt-contrib-clean'
+  grunt.loadNpmTasks 'grunt-notify'
 
   # Register custom tasks.
   grunt.registerTask 'build', ['coffee', 'less:development']
