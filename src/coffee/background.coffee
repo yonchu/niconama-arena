@@ -854,8 +854,6 @@ class BaseLiveData
         data.description or= c.description if c.description
         LOGGER.log "Use cache #{@id}", data
         return true
-    data = null
-    cache = null
     return false
 
   fetchDetailSuccess: (index, results) ->
