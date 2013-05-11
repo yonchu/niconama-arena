@@ -295,13 +295,14 @@ class History extends Base
 
   saveHistory: (data) ->
     LOGGER.info "Save history", data
-    chrome.extension.sendRequest({
+    chrome.runtime.sendMessage({
         'target' : 'history',
         'action' : 'saveHistory',
         'args'   : [data]
-      }, (response) ->
+      }, (response) =>
         res = response.res
         LOGGER.info "Saved history", res
+        return
     )
     return
 
@@ -319,14 +320,15 @@ preInit = ->
     location.replace watchUrl
     return
 
-  chrome.extension.sendRequest({
+  chrome.runtime.sendMessage({
       'target' : 'config',
       'action' : 'getConfigForAutoJump',
       'args'   : []
-    }, (response) ->
+    }, (response) =>
       config = response.res
       # Initialize
       init config
+      return
   )
   return
 

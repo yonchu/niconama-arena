@@ -52,18 +52,24 @@ Background = (function() {
   Background.prototype.addEventListeners = function() {
     var _this = this;
 
-    chrome.extension.onRequest.addListener(function(message, sender, sendResponse) {
+    chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
       var res, target;
 
-      target = _this.commands[message.target];
-      if (!target) {
-        throw new Error("Invalid target " + message.target);
+      if (sender.tab) {
+        console.log("from a content script: " + sender.tab.url);
+      } else {
+        console.log("from the extension");
       }
-      res = target[message.action].apply(target, message.args);
+      target = _this.commands[request.target];
+      if (!target) {
+        throw new Error("Invalid target " + request.target);
+      }
+      res = target[request.action].apply(target, request.args);
       sendResponse({
         res: res
       });
-      return target = null;
+      target = null;
+      return true;
     });
   };
 
@@ -1209,8 +1215,6 @@ BaseLiveData = (function() {
         return true;
       }
     }
-    data = null;
-    cache = null;
     return false;
   };
 

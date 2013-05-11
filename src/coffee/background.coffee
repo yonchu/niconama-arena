@@ -38,13 +38,18 @@ class Background
     @addEventListeners()
 
   addEventListeners: ->
-    chrome.extension.onRequest.addListener (message, sender, sendResponse) =>
-      target = @commands[message.target]
+    chrome.runtime.onMessage.addListener (request, sender, sendResponse) =>
+      if sender.tab
+        console.log "from a content script: #{sender.tab.url}"
+      else
+        console.log "from the extension"
+      target = @commands[request.target]
       unless target
-        throw new Error "Invalid target #{message.target}"
-      res = target[message.action].apply target, message.args
-      sendResponse {res: res}
+        throw new Error "Invalid target #{request.target}"
+      res = target[request.action].apply target, request.args
+      sendResponse res: res
       target = null
+      return true
     return
 
 

@@ -339,8 +339,10 @@ History = (function(_super) {
   };
 
   History.prototype.saveHistory = function(data) {
+    var _this = this;
+
     LOGGER.info("Save history", data);
-    chrome.extension.sendRequest({
+    chrome.runtime.sendMessage({
       'target': 'history',
       'action': 'saveHistory',
       'args': [data]
@@ -348,7 +350,7 @@ History = (function(_super) {
       var res;
 
       res = response.res;
-      return LOGGER.info("Saved history", res);
+      LOGGER.info("Saved history", res);
     });
   };
 
@@ -357,7 +359,8 @@ History = (function(_super) {
 })(Base);
 
 preInit = function() {
-  var watchUrl;
+  var watchUrl,
+    _this = this;
 
   if ($('#zero_lead').length) {
     LOGGER.info('No avairable nico_arena on Harajuku.');
@@ -369,7 +372,7 @@ preInit = function() {
     location.replace(watchUrl);
     return;
   }
-  chrome.extension.sendRequest({
+  chrome.runtime.sendMessage({
     'target': 'config',
     'action': 'getConfigForAutoJump',
     'args': []
@@ -377,7 +380,7 @@ preInit = function() {
     var config;
 
     config = response.res;
-    return init(config);
+    init(config);
   });
 };
 
