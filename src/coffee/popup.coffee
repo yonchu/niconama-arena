@@ -12,6 +12,23 @@ date2String = (date) ->
   "#{mm}/#{dd} #{hh}:#{min}"
 
 
+generateBeforeMessage = (now, targetTime) ->
+  delta = targetTime - now
+  d = Math.floor delta / (24 * 60 * 60 * 1000)
+  remainder = delta % (24 * 60 * 60 * 1000)
+  h = Math.floor remainder / (60 * 60 * 1000)
+  remainder = delta % (60 * 60 * 1000)
+  m = Math.floor remainder / (60 * 1000)
+  ret = ''
+  if d > 0
+    ret += "#{d} 日 "
+  if h > 0
+    ret += "#{h} 時間 "
+  if m > 0
+    ret += "#{m} 分"
+  return ret
+
+
 class Popup
   @LOADING_VIEW: """
   <div class="nowloading active">
@@ -233,12 +250,19 @@ class LiveInfoHtml
       if @now > startTime
         # on-air
         status = 'ただいま放送中'
-      else if openTime and @now > openTime
-        # open gate
-        status = 'まもなく放送開始'
-      else if openTime and @now > openTime - LiveInfoHtml.BEFORE_TIME_SEC * 1000
-        # before open gate
-        status = 'まもなく開場'
+      else if openTime
+        if @now > openTime
+          # open gate
+          status = 'まもなく放送開始'
+        else if @now > openTime - LiveInfoHtml.BEFORE_TIME_SEC * 1000
+          # before open gate
+          status = 'まもなく開場'
+        else if @now < openTime
+          status = "開場まであと #{generateBeforeMessage @now, openTime}"
+          flags.push 'long-before'
+      else if @now < startTime
+          status = "開演まであと #{generateBeforeMessage @now, startTime}"
+          flags.push 'long-before'
     # Set status.
     @html.status = status
     # Set flag.

@@ -1,6 +1,6 @@
 //@ sourceMappingURL=popup.map
 (function() {
-  var BaseTab, FavoriteTab, HistoryTab, LOGGER, LiveInfoHtml, LiveTab, OfficialTab, POPUP, Popup, SettingsTab, TimeshiftTab, date2String,
+  var BaseTab, FavoriteTab, HistoryTab, LOGGER, LiveInfoHtml, LiveTab, OfficialTab, POPUP, Popup, SettingsTab, TimeshiftTab, date2String, generateBeforeMessage,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
     __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
@@ -27,6 +27,28 @@
       min = '0' + min;
     }
     return "" + mm + "/" + dd + " " + hh + ":" + min;
+  };
+
+  generateBeforeMessage = function(now, targetTime) {
+    var d, delta, h, m, remainder, ret;
+
+    delta = targetTime - now;
+    d = Math.floor(delta / (24 * 60 * 60 * 1000));
+    remainder = delta % (24 * 60 * 60 * 1000);
+    h = Math.floor(remainder / (60 * 60 * 1000));
+    remainder = delta % (60 * 60 * 1000);
+    m = Math.floor(remainder / (60 * 1000));
+    ret = '';
+    if (d > 0) {
+      ret += "" + d + " 日 ";
+    }
+    if (h > 0) {
+      ret += "" + h + " 時間 ";
+    }
+    if (m > 0) {
+      ret += "" + m + " 分";
+    }
+    return ret;
   };
 
   Popup = (function() {
@@ -315,10 +337,18 @@
       } else if (startTime) {
         if (this.now > startTime) {
           status = 'ただいま放送中';
-        } else if (openTime && this.now > openTime) {
-          status = 'まもなく放送開始';
-        } else if (openTime && this.now > openTime - LiveInfoHtml.BEFORE_TIME_SEC * 1000) {
-          status = 'まもなく開場';
+        } else if (openTime) {
+          if (this.now > openTime) {
+            status = 'まもなく放送開始';
+          } else if (this.now > openTime - LiveInfoHtml.BEFORE_TIME_SEC * 1000) {
+            status = 'まもなく開場';
+          } else if (this.now < openTime) {
+            status = "開場まであと " + (generateBeforeMessage(this.now, openTime));
+            flags.push('long-before');
+          }
+        } else if (this.now < startTime) {
+          status = "開演まであと " + (generateBeforeMessage(this.now, startTime));
+          flags.push('long-before');
         }
       }
       this.html.status = status;
