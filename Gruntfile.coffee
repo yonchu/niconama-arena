@@ -8,8 +8,6 @@ module.exports = (grunt) ->
 
   # Specify relative path from "src/coffee/".
   bare_list = [
-    'autojump.coffee',
-    'background.coffee',
     'debug.coffee'
   ]
   reTrimCwd = new RegExp '^src/coffee/'

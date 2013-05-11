@@ -1356,9 +1356,10 @@ class History
     return @_sortHistory @_getHistory()
 
 
-
-config = new Config
-history = new History config
-bg = new Background config, history
-nicoInfo = new NicoInfo config
-liveChecker = new LiveChecker config, nicoInfo
+## Main
+exports = exports ? window ? @
+exports.config = new Config
+exports.history = new History config
+exports.bg = new Background config, history
+exports.nicoInfo = new NicoInfo config
+exports.liveChecker = new LiveChecker config, nicoInfo
