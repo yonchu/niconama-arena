@@ -347,7 +347,7 @@
             flags.push('long-before');
           }
         } else if (this.now < startTime) {
-          status = "開演まであと " + (generateBeforeMessage(this.now, startTime));
+          status = "開始まであと " + (generateBeforeMessage(this.now, startTime));
           flags.push('long-before');
         }
       }

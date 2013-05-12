@@ -149,7 +149,7 @@ input[type="text"] {
   text-shadow: none;
 }
 #tabs-content > div.live-list > ul li.long-before .detail .status {
-  color: rgba(0, 0, 0, 0.8);
+  color: rgba(0, 0, 0, 0.6);
   text-shadow: none;
 }
 #tabs-content .thumnail {

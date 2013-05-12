@@ -261,7 +261,7 @@ class LiveInfoHtml
           status = "開場まであと #{generateBeforeMessage @now, openTime}"
           flags.push 'long-before'
       else if @now < startTime
-          status = "開演まであと #{generateBeforeMessage @now, startTime}"
+          status = "開始まであと #{generateBeforeMessage @now, startTime}"
           flags.push 'long-before'
     # Set status.
     @html.status = status
