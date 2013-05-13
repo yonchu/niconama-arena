@@ -809,22 +809,34 @@ class BaseLiveData
   updateData: ->
     return
 
+  isCancelFethDetail: (item, now) ->
+    if item.flag and item.flag is 'disable'
+      LOGGER.log "Cancel fetch detail #{@id} (disable)"
+      return true
+    else if item.openTime and item.startTime
+      if item.endTime
+        LOGGER.log "Cancel fetch detail #{@id} (all times exists)"
+        return true
+      else
+        if now < item.startTime.getTime()
+          LOGGER.log "Cancel fetch detail #{@id}
+            (endTime not exists but not starts yet)"
+          return true
+    return false
+
   fetchDetail: (index, results) ->
     LOGGER.log "Fetch detail #{@id} #{index} "
     if index < results.length
+      now = (new Date).getTime()
       for nextIndex in [index..results.length-1]
         item = results[nextIndex]
         useCache = @setDataFromCache item, @cache
-        if item.flag and item.flag is 'disable'
-          LOGGER.log "Cancel fetch detail #{@id} (disable)"
+        if @isCancelFethDetail item, now
           continue
-        if item.startTime and item.endTime
-          if item.openTime
-            LOGGER.log "Cancel fetch detail #{@id} (openTime exists)"
-            continue
-          else unless @config.enableFetchDetail
-            LOGGER.log "Cancel fetch detail #{@id} (config enableFetchDetail is true)"
-            continue
+        if useCache
+          LOGGER.warn "Fetch detail with cache #{index} #{@id}", item
+        else
+          LOGGER.info "Fetch detail (no cache) #{index} #{@id}", item
         setTimeout(
           @onTimeoutFetch(
             url: BaseLiveData.GATE_URL + item.id,
@@ -875,9 +887,11 @@ class BaseLiveData
 
   setDetailFromResponse: (data, response) ->
     $page = $($.parseHTML (@transIMG response))
-    commuUrl = $page.find('.com .smn a').prop('href')
+    commuUrl = $page.find('.com,.chan .smn a').prop('href')
     if commuUrl
       data.commuId = commuUrl.match(/\/((ch|co)\d+)/)?[1]
+    else
+      LOGGER.log "Could not get commuUrl #{@id}", data
     if not data.openTime or not data.startTime
       time = $page.find('#bn_gbox .kaijo').text().trim()
       timeMatch = time.match /(\d\d\d\d)\/(\d\d\/\d\d).*開場:(\d\d:\d\d).*開演:(\d\d:\d\d)/
@@ -931,7 +945,7 @@ class BaseLiveData
     @isUpdated = true
     @isError = false
     @lastUpdateTime = new Date
-    LOGGER.log "===== Update #{@id} complete ====="
+    LOGGER.info "===== Update #{@id} complete ====="
     LOGGER.log @lastUpdateTime
     LOGGER.log results
     results = null
@@ -1280,6 +1294,18 @@ class Official extends BaseLiveData
       results.push ret
     results = null
     return
+
+  ## official
+  # 1. open/start/end : no
+  #    open : no
+  # 2. open/start/end : yes (already end or comming soon)
+  #    end : no (on-air)
+  #    open : no
+  isCancelFethDetail: (item, now) ->
+    return true if super item, now
+    if item.openTime and item.startTime
+      return true
+    return false
 
 
 class History

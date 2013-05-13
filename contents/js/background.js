@@ -1141,26 +1141,40 @@
 
     BaseLiveData.prototype.updateData = function() {};
 
+    BaseLiveData.prototype.isCancelFethDetail = function(item, now) {
+      if (item.flag && item.flag === 'disable') {
+        LOGGER.log("Cancel fetch detail " + this.id + " (disable)");
+        return true;
+      } else if (item.openTime && item.startTime) {
+        if (item.endTime) {
+          LOGGER.log("Cancel fetch detail " + this.id + " (all times exists)");
+          return true;
+        } else {
+          if (now < item.startTime.getTime()) {
+            LOGGER.log("Cancel fetch detail " + this.id + "            (endTime not exists but not starts yet)");
+            return true;
+          }
+        }
+      }
+      return false;
+    };
+
     BaseLiveData.prototype.fetchDetail = function(index, results) {
-      var item, nextIndex, useCache, _i, _ref;
+      var item, nextIndex, now, useCache, _i, _ref;
 
       LOGGER.log("Fetch detail " + this.id + " " + index + " ");
       if (index < results.length) {
+        now = (new Date).getTime();
         for (nextIndex = _i = index, _ref = results.length - 1; index <= _ref ? _i <= _ref : _i >= _ref; nextIndex = index <= _ref ? ++_i : --_i) {
           item = results[nextIndex];
           useCache = this.setDataFromCache(item, this.cache);
-          if (item.flag && item.flag === 'disable') {
-            LOGGER.log("Cancel fetch detail " + this.id + " (disable)");
+          if (this.isCancelFethDetail(item, now)) {
             continue;
           }
-          if (item.startTime && item.endTime) {
-            if (item.openTime) {
-              LOGGER.log("Cancel fetch detail " + this.id + " (openTime exists)");
-              continue;
-            } else if (!this.config.enableFetchDetail) {
-              LOGGER.log("Cancel fetch detail " + this.id + " (config enableFetchDetail is true)");
-              continue;
-            }
+          if (useCache) {
+            LOGGER.warn("Fetch detail with cache " + index + " " + this.id, item);
+          } else {
+            LOGGER.info("Fetch detail (no cache) " + index + " " + this.id, item);
           }
           setTimeout(this.onTimeoutFetch({
             url: BaseLiveData.GATE_URL + item.id
@@ -1242,9 +1256,11 @@
       var $page, commuUrl, dateStr, endDateStr, endTimeMatch, endTimeStr, endYearStr, openTimeStr, startTimeStr, time, timeMatch, yearStr, _ref;
 
       $page = $($.parseHTML(this.transIMG(response)));
-      commuUrl = $page.find('.com .smn a').prop('href');
+      commuUrl = $page.find('.com,.chan .smn a').prop('href');
       if (commuUrl) {
         data.commuId = (_ref = commuUrl.match(/\/((ch|co)\d+)/)) != null ? _ref[1] : void 0;
+      } else {
+        LOGGER.log("Could not get commuUrl " + this.id, data);
       }
       if (!data.openTime || !data.startTime) {
         time = $page.find('#bn_gbox .kaijo').text().trim();
@@ -1313,7 +1329,7 @@
       this.isUpdated = true;
       this.isError = false;
       this.lastUpdateTime = new Date;
-      LOGGER.log("===== Update " + this.id + " complete =====");
+      LOGGER.info("===== Update " + this.id + " complete =====");
       LOGGER.log(this.lastUpdateTime);
       LOGGER.log(results);
       results = null;
@@ -1758,6 +1774,16 @@
         results.push(ret);
       }
       results = null;
+    };
+
+    Official.prototype.isCancelFethDetail = function(item, now) {
+      if (Official.__super__.isCancelFethDetail.call(this, item, now)) {
+        return true;
+      }
+      if (item.openTime && item.startTime) {
+        return true;
+      }
+      return false;
     };
 
     return Official;
