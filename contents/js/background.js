@@ -1862,7 +1862,7 @@
     };
 
     History.prototype._removeOldHistory = function(hist) {
-      var histories, i, id, over, _i, _ref;
+      var histories, i, id, over, _i, _ref, _ref1;
 
       histories = this._sortHistory(hist);
       over = histories.length - History.MAX_SIZE;
@@ -1870,7 +1870,7 @@
         LOGGER.log('Need not to remove old history');
         return;
       }
-      for (i = _i = 0, _ref = over - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
+      for (i = _i = _ref = History.MAX_SIZE, _ref1 = History.MAX_SIZE + over - 1; _ref <= _ref1 ? _i <= _ref1 : _i >= _ref1; i = _ref <= _ref1 ? ++_i : --_i) {
         id = histories[i].id;
         LOGGER.log("Remove history " + id);
         delete hist[id];

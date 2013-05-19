@@ -1358,7 +1358,7 @@ class History
     if over <= 0
       LOGGER.log 'Need not to remove old history'
       return
-    for i in [0..over-1]
+    for i in [History.MAX_SIZE..(History.MAX_SIZE + over - 1)]
       id = histories[i].id
       LOGGER.log "Remove history #{id}"
       delete hist[id]
