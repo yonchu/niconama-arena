@@ -1739,7 +1739,7 @@
 
         try {
           json = response.reserved_stream_list;
-          if (!json) {
+          if (!(json && json.length > 0)) {
             LOGGER.log('Fetch official from comingsoon finish all');
             _this.fetchDetail(0, results);
             _this.official = results;
@@ -1748,6 +1748,10 @@
           }
           _this.getResultsFromComingsoon(json, results);
           LOGGER.log("Fetch official from comingsoon finish " + index);
+          if (index >= 10) {
+            LOGGER.error("Error in fetch comingsoon: index over", response);
+            throw Error("index is too large");
+          }
           _this.fetchFromComingsoon(index + 1, results);
         } catch (_error) {
           error = _error;
