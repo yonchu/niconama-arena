@@ -1735,21 +1735,22 @@
       var _this = this;
 
       return function(response) {
-        var error, json;
+        var error, streamList, total;
 
         try {
-          json = response.reserved_stream_list;
-          if (!(json && json.length > 0)) {
+          streamList = response.reserved_stream_list;
+          total = response.total;
+          if (!(streamList && streamList.length > 0 && index < total)) {
             LOGGER.log('Fetch official from comingsoon finish all');
             _this.fetchDetail(0, results);
             _this.official = results;
             results = null;
             return;
           }
-          _this.getResultsFromComingsoon(json, results);
+          _this.getResultsFromComingsoon(streamList, results);
           LOGGER.log("Fetch official from comingsoon finish " + index);
           if (index >= 10) {
-            LOGGER.error("Error in fetch comingsoon: index over", response);
+            LOGGER.error("Error in fetch comingsoon: index over " + index, response);
             throw Error("index is too large");
           }
           _this.fetchFromComingsoon(index + 1, results);
@@ -1761,11 +1762,11 @@
       };
     };
 
-    Official.prototype.getResultsFromComingsoon = function(json, results) {
+    Official.prototype.getResultsFromComingsoon = function(list, results) {
       var item, ret, _i, _len;
 
-      for (_i = 0, _len = json.length; _i < _len; _i++) {
-        item = json[_i];
+      for (_i = 0, _len = list.length; _i < _len; _i++) {
+        item = list[_i];
         ret = {};
         ret.id = 'lv' + item.id;
         ret.title = item.title;
