@@ -63,7 +63,7 @@ def release():
     local('grunt clean:jsmap')
     print(green('Create release archive...'))
     with lcd('contents'):
-        local('zip -r ../niconama-arena.zip ./')
+        local('zip -r ../release.zip ./')
 
 
 @task
@@ -78,4 +78,4 @@ def clean_all():
     print(green('Clean *.pyc, node_modules...'))
     local('rm -r *.pyc node_modules')
     print(green('Remove release archive...'))
-    local('rm -f niconama-arena.zip')
+    local('rm -f release.zip')
