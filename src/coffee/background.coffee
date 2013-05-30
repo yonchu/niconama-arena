@@ -1251,7 +1251,7 @@ class Official extends BaseLiveData
     return (response) =>
       try
         json = response.reserved_stream_list
-        unless json
+        unless json and json.length > 0
           LOGGER.log 'Fetch official from comingsoon finish all'
           @fetchDetail 0, results
           # TODO キャッシュがない場合にのみ設定するほうが良いかも
@@ -1260,6 +1260,9 @@ class Official extends BaseLiveData
           return
         @getResultsFromComingsoon json, results
         LOGGER.log "Fetch official from comingsoon finish #{index}"
+        if index >= 10
+          LOGGER.error "Error in fetch comingsoon: index over", response
+          throw Error "index is too large"
         @fetchFromComingsoon index + 1, results
       catch error
         @updateError 'Error in fetchFromComingsoonSuccess', error
