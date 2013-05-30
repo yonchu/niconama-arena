@@ -57,9 +57,9 @@
         var res, target;
 
         if (sender.tab) {
-          console.log("from a content script: " + sender.tab.url);
+          LOGGER.log("from a content script: " + sender.tab.url);
         } else {
-          console.log("from the extension");
+          LOGGER.log("from the extension");
         }
         target = _this.commands[request.target];
         if (!target) {
@@ -139,6 +139,8 @@
         whitelist: []
       }
     };
+
+    Config.prototype.opentabStatus = {};
 
     function Config() {
       this.initSettings();
@@ -485,6 +487,71 @@
       settings['blacklist'] = list;
     };
 
+    Config.prototype.isOpentabEnable = function(commuId) {
+      var st;
+
+      st = this.getOpentabStatus(commuId);
+      return st === 'enable';
+    };
+
+    Config.prototype.getOpentabStatus = function(commuId) {
+      var list, st;
+
+      list = this.getBlackList();
+      if (__indexOf.call(list, commuId) >= 0) {
+        return 'disable';
+      }
+      st = this.opentabStatus[commuId];
+      if (!st) {
+        return 'enable';
+      }
+      if (st === 'disable') {
+        delete this.opentabStatus[commuId];
+        return 'enable';
+      }
+      return st;
+    };
+
+    Config.prototype.setOpentabStatus = function(commuId, status) {
+      var save;
+
+      console.log(commuId, status);
+      this.opentabStatus[commuId] = status;
+      console.log(commuId);
+      save = false;
+      if (status === 'disable') {
+        save = this.addOpentabBlackList(commuId);
+      } else {
+        save = this.removeOpentabBlackList(commuId);
+      }
+      if (save) {
+        this.saveSettings();
+      }
+    };
+
+    Config.prototype.addOpentabBlackList = function(commuId) {
+      var list;
+
+      list = this.getBlackList();
+      if (__indexOf.call(list, commuId) >= 0) {
+        return false;
+      }
+      list.push(commuId);
+      return true;
+    };
+
+    Config.prototype.removeOpentabBlackList = function(commuId) {
+      var idx, list;
+
+      list = this.getBlackList();
+      idx = list.indexOf(commuId);
+      if (idx < 0) {
+        return false;
+      }
+      list.splice(idx, 1);
+      return true;
+    };
+
     Config.prototype.getEnableAutoJump = function() {
       return this._getSettingsFlag('enableAutoJump');
     };
@@ -715,11 +782,10 @@
     };
 
     LiveChecker.prototype.getOpenTabTargets = function() {
-      var blacklist, isBeforeEnabled, isGateEnabled, isOnairEnabled, item, liveData, liveDataList, n, openTabTargets, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3, _ref4, _ref5;
+      var isBeforeEnabled, isGateEnabled, isOnairEnabled, item, liveData, liveDataList, n, openTabTargets, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2;
 
       liveDataList = this.nicoInfo.liveDataList;
       openTabTargets = [];
-      blacklist = this.config.getBlackList();
       for (_i = 0, _len = liveDataList.length; _i < _len; _i++) {
         liveData = liveDataList[_i];
         n = liveData.getNofications();
@@ -730,7 +796,7 @@
           _ref = n.before;
           for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
             item = _ref[_j];
-            if (item.commuId && (_ref1 = item.commuId, __indexOf.call(blacklist, _ref1) >= 0)) {
+            if (item.commuId && !this.config.isOpentabEnable(item.commuId)) {
               continue;
             }
             if (this.openTabHistory[item.id]) {
@@ -745,10 +811,10 @@
           }
         }
         if (isBeforeEnabled || isGateEnabled) {
-          _ref2 = n.gate;
-          for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
-            item = _ref2[_k];
-            if (item.commuId && (_ref3 = item.commuId, __indexOf.call(blacklist, _ref3) >= 0)) {
+          _ref1 = n.gate;
+          for (_k = 0, _len2 = _ref1.length; _k < _len2; _k++) {
+            item = _ref1[_k];
+            if (item.commuId && !this.config.isOpentabEnable(item.commuId)) {
               continue;
             }
             if (this.openTabHistory[item.id]) {
@@ -763,10 +829,10 @@
           }
         }
         if (isBeforeEnabled || isGateEnabled || isOnairEnabled) {
-          _ref4 = n.onair;
-          for (_l = 0, _len3 = _ref4.length; _l < _len3; _l++) {
-            item = _ref4[_l];
-            if (item.commuId && (_ref5 = item.commuId, __indexOf.call(blacklist, _ref5) >= 0)) {
+          _ref2 = n.onair;
+          for (_l = 0, _len3 = _ref2.length; _l < _len3; _l++) {
+            item = _ref2[_l];
+            if (item.commuId && !this.config.isOpentabEnable(item.commuId)) {
               continue;
             }
             if (this.openTabHistory[item.id]) {
@@ -1487,6 +1553,7 @@
     }
 
     Favorite.prototype.updateData = function() {
+      return;
       this.fetchFromMypage();
     };
 
@@ -1588,6 +1655,7 @@
     }
 
     Timeshift.prototype.updateData = function() {
+      return;
       this.fetchFromMypage();
     };
 
@@ -1672,6 +1740,7 @@
     }
 
     Official.prototype.updateData = function() {
+      return;
       this.fetchFromRank();
     };
 

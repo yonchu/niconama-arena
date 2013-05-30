@@ -29,6 +29,7 @@ str2date = (year, date, time) ->
 
 
 class Background
+  # TODO Commandsは別クラス referto Vimmers
   commands:
     'config': null
 
@@ -40,9 +41,9 @@ class Background
   addEventListeners: ->
     chrome.runtime.onMessage.addListener (request, sender, sendResponse) =>
       if sender.tab
-        console.log "from a content script: #{sender.tab.url}"
+        LOGGER.log "from a content script: #{sender.tab.url}"
       else
-        console.log "from the extension"
+        LOGGER.log "from the extension"
       target = @commands[request.target]
       unless target
         throw new Error "Invalid target #{request.target}"
@@ -98,14 +99,15 @@ class Config
         beforeTimeSec: 300,
         enable: 'before'
       rule: 'blacklist'
-      blacklist: ['ch12345,co67890']
+      blacklist: []
       whitelist: []
+
+  opentabStatus: {}
 
   constructor: ->
     @initSettings()
     @setSaveTabNum 0 unless @_getValue('saveTabNum')?
     @enableFetchDetail = false
-
 
   # ===== localStorage functions =====
   _getValue: (key, def=undefined) ->
@@ -122,7 +124,6 @@ class Config
     else
       localStorage.removeItem(key)
     return
-
 
   # ===== Settings functions =====
   initSettings: ->
@@ -165,7 +166,6 @@ class Config
     @_setSettingsValue key, value
     return
 
-
   # ===== Common functions =====
   _isInt: (value) ->
     unless value?
@@ -174,7 +174,6 @@ class Config
     if (value.match /[^0-9]/g) or (parseInt value, 10) + '' isnt value
       return false
     return true
-
 
   # ===== tabNum =====
   getSaveTabNum: ->
@@ -344,6 +343,46 @@ class Config
     settings['blacklist'] = list
     return
 
+  isOpentabEnable: (commuId) ->
+    st = @getOpentabStatus commuId
+    return st is 'enable'
+
+  getOpentabStatus: (commuId) ->
+    list = @getBlackList()
+    if commuId in list
+      return 'disable'
+    st = @opentabStatus[commuId]
+    unless st
+      return 'enable'
+    if st is 'disable'
+      delete @opentabStatus[commuId]
+      return 'enable'
+    return st
+
+  setOpentabStatus: (commuId, status) ->
+    @opentabStatus[commuId] = status
+    save = false
+    if status is 'disable'
+      save = @addOpentabBlackList commuId
+    else
+      save = @removeOpentabBlackList commuId
+    @saveSettings() if save
+    return
+
+  addOpentabBlackList: (commuId) ->
+    list = @getBlackList()
+    if commuId in list
+      return false
+    list.push commuId
+    return true
+
+  removeOpentabBlackList: (commuId) ->
+    list = @getBlackList()
+    idx = list.indexOf commuId
+    if idx < 0
+      return false
+    list.splice idx, 1
+    return true
 
   # ===== Auto jump =====
   getEnableAutoJump: ->
@@ -517,7 +556,6 @@ class LiveChecker
   getOpenTabTargets: ->
     liveDataList = @nicoInfo.liveDataList
     openTabTargets = []
-    blacklist = @config.getBlackList()
     for liveData in liveDataList
       n = liveData.getNofications()
       # LOGGER.log "Open tab #{liveData.id}", n
@@ -526,7 +564,7 @@ class LiveChecker
       isOnairEnabled = @config.isOnairOpentabEnabled liveData.id
       if isBeforeEnabled
         for item in n.before
-          continue if item.commuId and item.commuId in blacklist
+          continue if item.commuId and not @config.isOpentabEnable item.commuId
           if @openTabHistory[item.id]
             unless 'before' in @openTabHistory[item.id]
               @openTabHistory[item.id].push 'before'
@@ -536,7 +574,7 @@ class LiveChecker
           openTabTargets.push item.link
       if isBeforeEnabled or isGateEnabled
         for item in n.gate
-          continue if item.commuId and item.commuId in blacklist
+          continue if item.commuId and not @config.isOpentabEnable item.commuId
           if @openTabHistory[item.id]
             unless 'gate' in @openTabHistory[item.id]
               @openTabHistory[item.id].push 'gate'
@@ -546,7 +584,7 @@ class LiveChecker
           openTabTargets.push item.link
       if isBeforeEnabled or isGateEnabled or isOnairEnabled
         for item in n.onair
-          continue if item.commuId and item.commuId in blacklist
+          continue if item.commuId and not @config.isOpentabEnable item.commuId
           if @openTabHistory[item.id]
             unless 'onair' in @openTabHistory[item.id]
               @openTabHistory[item.id].push 'onair'
@@ -1059,6 +1097,7 @@ class Favorite extends BaseLiveData
     super 'favorite', config
 
   updateData: ->
+    return
     @fetchFromMypage()
     return
 
@@ -1140,6 +1179,7 @@ class Timeshift extends BaseLiveData
     @fetchIntervalSec = 3.5
 
   updateData: ->
+    return
     @fetchFromMypage()
     return
 
@@ -1208,6 +1248,7 @@ class Official extends BaseLiveData
     super 'official', config
 
   updateData: ->
+    return
     @fetchFromRank()
     return
 

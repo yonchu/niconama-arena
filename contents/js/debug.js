@@ -12,7 +12,7 @@ Logger = (function() {
     OFF: 99
   };
 
-  Logger.DEFAULT_LEVEL = Logger.LEVEL.INFO;
+  Logger.DEFAULT_LEVEL = Logger.LEVEL.ALL;
 
   function Logger(level) {
     var methods;

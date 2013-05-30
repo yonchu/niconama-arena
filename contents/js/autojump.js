@@ -50,43 +50,76 @@
 
     Base.prototype.currentLiveId = null;
 
+    Base.prototype.commuId = null;
+
+    Base.prototype.commuUrl = null;
+
+    Base.prototype.pageType = null;
+
     function Base(config) {
       this.config = config;
       LOGGER.info('config: ', this.config);
-      this.init();
+      if (!this.init()) {
+        return;
+      }
       this.addEventListeners();
     }
 
     Base.prototype.init = function() {
-      var commuId, url;
-
-      this.currentLiveId = this.getLiveIdFromUrl(location.href);
+      this.commuUrl = this.getCommuUrl();
+      this.commuId = this.getCommuIdFromUrl(this.commuUrl);
+      this.currentLiveId = this.getLiveId();
       if (!this.currentLiveId) {
-        commuId = this.getCommuIdFromUrl(location.href);
-        if (commuId) {
-          LOGGER.info("commuId = " + commuId);
-          url = $('meta[property="og:url"]').attr('content');
-          this.currentLiveId = this.getLiveIdFromUrl(url);
-        }
+        throw Error("Not found currentLiveId");
       }
-      if (!this.currentLiveId) {
-        throw new Error("Not found currentLiveId");
-      }
+      LOGGER.info("commuUrl = " + this.commuUrl);
+      LOGGER.info("commuId = " + this.commuId);
       LOGGER.info("currentLiveId = " + this.currentLiveId);
+      LOGGER.info("pageType = " + this.pageType);
+      return true;
     };
 
     Base.prototype.addEventListeners = function() {};
 
-    Base.prototype.getLiveIdFromUrl = function(url) {
-      var _ref;
+    Base.prototype.getCommuUrl = function() {
+      var commuUrl, _ref;
 
-      return (_ref = url.match(/(watch|gate)\/(lv\d+)/)) != null ? _ref[2] : void 0;
+      commuUrl = (_ref = $('.com,.chan')) != null ? _ref.find('.smn a').prop('href') : void 0;
+      if (commuUrl) {
+        this.pageType = 'gate';
+      } else {
+        commuUrl = $('#watch_title_box > div > a').prop('href');
+        if (commuUrl) {
+          this.pageType = 'live';
+        }
+      }
+      return commuUrl;
     };
 
     Base.prototype.getCommuIdFromUrl = function(url) {
       var _ref;
 
-      return (_ref = url.match(/(watch|gate)\/(co\d+)/)) != null ? _ref[2] : void 0;
+      if (url) {
+        return (_ref = url.match(/\/((ch|co)\d+)/)) != null ? _ref[1] : void 0;
+      }
+      return null;
+    };
+
+    Base.prototype.getLiveId = function() {
+      var id, url;
+
+      id = this.getLiveIdFromUrl(location.href);
+      if (!id) {
+        url = $('meta[property="og:url"]').attr('content');
+        id = this.getLiveIdFromUrl(url);
+      }
+      return id;
+    };
+
+    Base.prototype.getLiveIdFromUrl = function(url) {
+      var _ref;
+
+      return (_ref = url.match(/(watch|gate)\/(lv\d+)/)) != null ? _ref[2] : void 0;
     };
 
     return Base;
@@ -98,43 +131,74 @@
 
     function AutoJump() {
       this.checkNextOnair = __bind(this.checkNextOnair, this);
+      this.onToggleButton = __bind(this.onToggleButton, this);
       this.onChangeCheckBox = __bind(this.onChangeCheckBox, this);      _ref = AutoJump.__super__.constructor.apply(this, arguments);
       return _ref;
     }
 
-    AutoJump.CHECKBOX = "<div id=\"auto-jump\">\n  <div>\n    <input type=\"checkbox\" name=\"auto-jump\" /> 自動枠移動\n  </div>\n</div>";
+    AutoJump.TPL = "<div id=\"auto-jump\">\n  <div>\n    <input type=\"checkbox\" name=\"auto-jump\" /> 自動枠移動\n  </div>\n</div>";
+
+    AutoJump.OPENTAB_STATUS = {
+      'disable': {
+        className: 'oepntab-disable',
+        msg: '無効',
+        next: 'tempDisable'
+      },
+      'tempDisable': {
+        className: 'oepntab-tempDisable',
+        msg: '一時無効',
+        next: 'enable'
+      },
+      'enable': {
+        className: 'oepntab-enable',
+        msg: '有効',
+        next: 'disable'
+      }
+    };
+
+    AutoJump.prototype.$el = null;
 
     AutoJump.prototype.$checkbox = null;
 
-    AutoJump.prototype.commuUrl = null;
+    AutoJump.prototype.$toggleButton = null;
 
     AutoJump.prototype.isCurrentLiveClosed = false;
 
     AutoJump.prototype.checkTimer = null;
 
     AutoJump.prototype.init = function() {
-      var $autoJumpDiv;
-
       LOGGER.info('Start auto jump.');
       AutoJump.__super__.init.call(this);
-      this.commuUrl = $('#commu_info a').first().attr('href');
-      if (this.commuUrl) {
-        $('#watch_player_top_box').after(AutoJump.CHECKBOX);
-      } else {
-        this.commuUrl = $('.smn a').first().attr('href');
-        if (!this.commuUrl) {
-          LOGGER.info('No avairable on official live.');
-          return;
-        }
-        $('#bn_gbox').after(AutoJump.CHECKBOX);
-        $autoJumpDiv = $('#auto-jump').addClass('auto-jump-gate');
+      if (!(this.commuUrl && this.commuId && this.currentLiveId && this.pageType)) {
+        LOGGER.info("Not run in this page.");
+        return false;
       }
-      this.$checkbox = $('#auto-jump input:checkbox');
-      LOGGER.info("commuUrl = " + this.commuUrl);
+      this.render();
+      this.$el = $('#auto-jump');
+      this.$checkbox = this.$el.find('input:checkbox');
+      if (this.isJoinCommunity()) {
+        LOGGER.info('Joining this community.');
+        this.renderOpentabStatus();
+      }
       if (this.config.enableAutoJump) {
         this.$checkbox.attr('checked', true);
         this.checkNextOnair();
         this.checkTimer = setInterval(this.checkNextOnair, this.config.autoJumpIntervalSec * 1000);
+      }
+      return true;
+    };
+
+    AutoJump.prototype.render = function() {
+      var $autoJumpDiv, tpl;
+
+      tpl = AutoJump.TPL.replace('%commuId%', this.commuId);
+      if (this.pageType === 'live') {
+        return $('#watch_player_top_box').after(tpl);
+      } else if (this.pageType === 'gate') {
+        $('#bn_gbox').after(tpl);
+        return $autoJumpDiv = $('#auto-jump').addClass('auto-jump-gate');
+      } else {
+        throw Error("Unknow page type " + this.pageType, location.href);
       }
     };
 
@@ -150,6 +214,26 @@
       if (this.$checkbox.attr('checked')) {
         this.checkTimer = setInterval(this.checkNextOnair, this.config.autoJumpIntervalSec * 1000);
       }
+    };
+
+    AutoJump.prototype.onToggleButton = function(event) {
+      var className, key, map, value, _results;
+
+      className = this.$toggleButton.attr('class');
+      map = AutoJump.OPENTAB_STATUS;
+      _results = [];
+      for (key in map) {
+        if (!__hasProp.call(map, key)) continue;
+        value = map[key];
+        if (value.className === className) {
+          this.saveOpentabStatus(value.next);
+          this.showOpentabStatus(value.next);
+          break;
+        } else {
+          _results.push(void 0);
+        }
+      }
+      return _results;
     };
 
     AutoJump.prototype.checkNextOnair = function() {
@@ -201,6 +285,58 @@
       });
     };
 
+    AutoJump.prototype.isJoinCommunity = function() {
+      if (this.pageType === 'live') {
+        return $('span.favorite,span.favorite_ch_link').length === 0;
+      } else if (this.pageType === 'gate') {
+        return $('.join a').length === 0;
+      }
+      return false;
+    };
+
+    AutoJump.prototype.renderOpentabStatus = function() {
+      var html,
+        _this = this;
+
+      html = '<a href="javascript:void(0)">自動タブOPEN (';
+      html += this.commuId;
+      html += '): &nbsp;<span>???</span></a>';
+      this.$el.find('div').append(html);
+      this.$toggleButton = this.$el.find('a');
+      this.$toggleButton.on('click', this.onToggleButton);
+      chrome.runtime.sendMessage({
+        'target': 'config',
+        'action': 'getOpentabStatus',
+        'args': [this.commuId]
+      }, function(response) {
+        var status;
+
+        status = response.res;
+        _this.showOpentabStatus(status);
+      });
+    };
+
+    AutoJump.prototype.saveOpentabStatus = function(status) {
+      var _this = this;
+
+      chrome.runtime.sendMessage({
+        'target': 'config',
+        'action': 'setOpentabStatus',
+        'args': [this.commuId, status]
+      }, function(response) {});
+    };
+
+    AutoJump.prototype.showOpentabStatus = function(status) {
+      var className, map, msg;
+
+      LOGGER.log("Show openttab status: " + status);
+      map = AutoJump.OPENTAB_STATUS;
+      msg = map[status].msg;
+      className = map[status].className;
+      this.$toggleButton.attr('class', className);
+      this.$toggleButton.find('span').html(msg);
+    };
+
     return AutoJump;
 
   })(Base);
@@ -225,6 +361,7 @@
       if (this.config.enableAutoEnter) {
         this.$checkbox.attr('checked', true);
       }
+      return true;
     };
 
     AutoEnter.prototype.addEventListeners = function() {
@@ -263,15 +400,16 @@
       data.accessTime = (new Date).getTime();
       if (!this.validate(data)) {
         LOGGER.error("Validate error", data);
-        return;
+        return false;
       }
       this.saveHistory(data);
+      return true;
     };
 
     History.prototype.getLiveDataForGate = function() {
       var data, dateStr, endDateStr, endTimeMatch, endTimeStr, endYearStr, openTimeStr, startTimeStr, time, timeMatch, yearStr;
 
-      LOGGER.info("getLiveDataForGate() " + this.currentLiveId);
+      LOGGER.info("Saving history in gate page: " + this.currentLiveId);
       data = {};
       data.id = this.currentLiveId;
       data.title = $('.infobox h2 > span:first').text().trim();
@@ -300,7 +438,7 @@
     History.prototype.getLiveDataForWatch = function() {
       var data, dateStr, openTimeStr, startTimeStr, time, timeMatch, yearStr;
 
-      LOGGER.info("getLiveDataForWatch() " + this.currentLiveId);
+      LOGGER.info("Saving history in live page: " + this.currentLiveId);
       data = {};
       data.id = this.currentLiveId;
       data.link = Base.LIVE_URL + data.id;

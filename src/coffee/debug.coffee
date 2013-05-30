@@ -10,7 +10,7 @@ class Logger
     ERROR: 2,
     OFF: 99
 
-  @DEFAULT_LEVEL: Logger.LEVEL.INFO
+  @DEFAULT_LEVEL: Logger.LEVEL.ALL
 
   constructor: (level) ->
     @level = if isNaN level then Logger.DEFAULT_LEVEL else level

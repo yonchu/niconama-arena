@@ -45,39 +45,65 @@ class Base
 
   # === Properties.
   currentLiveId: null
+  commuId: null
+  commuUrl: null
+  # live or gate
+  pageType: null
 
   # === Constructor.
   constructor: (@config) ->
     LOGGER.info 'config: ', @config
-    @init()
+    return unless @init()
     @addEventListeners()
 
   init: ->
-    @currentLiveId = @getLiveIdFromUrl location.href
+    @commuUrl = @getCommuUrl()
+    @commuId = @getCommuIdFromUrl @commuUrl
+    @currentLiveId = @getLiveId()
     unless @currentLiveId
-      commuId = @getCommuIdFromUrl location.href
-      if commuId
-        LOGGER.info "commuId = #{commuId}"
-        url = $('meta[property="og:url"]').attr 'content'
-        @currentLiveId = @getLiveIdFromUrl url
-    unless @currentLiveId
-      throw new Error "Not found currentLiveId"
+      throw Error "Not found currentLiveId"
+    LOGGER.info "commuUrl = #{@commuUrl}"
+    LOGGER.info "commuId = #{@commuId}"
     LOGGER.info "currentLiveId = #{@currentLiveId}"
-    return
+    LOGGER.info "pageType = #{@pageType}"
+    return true
 
   # === Event listeners.
   addEventListeners: ->
 
-  getLiveIdFromUrl: (url) ->
-    url.match(/(watch|gate)\/(lv\d+)/)?[2]
+  # === Helper method.
+  getCommuUrl: ->
+    # Get community URL.
+    commuUrl = $('.com,.chan')?.find('.smn a').prop 'href'
+    if commuUrl
+      # Gate page.
+      @pageType = 'gate'
+    else
+      commuUrl = $('#watch_title_box > div > a').prop 'href'
+      if commuUrl
+        # Live page.
+        @pageType = 'live'
+    return commuUrl
 
   getCommuIdFromUrl: (url) ->
-    url.match(/(watch|gate)\/(co\d+)/)?[2]
+    if url
+      return url.match(/\/((ch|co)\d+)/)?[1]
+    return null
+
+  getLiveId: ->
+    id = @getLiveIdFromUrl location.href
+    unless id
+      url = $('meta[property="og:url"]').attr 'content'
+      id = @getLiveIdFromUrl url
+    return id
+
+  getLiveIdFromUrl: (url) ->
+    return url.match(/(watch|gate)\/(lv\d+)/)?[2]
 
 
 class AutoJump extends Base
   # === Class variables.
-  @CHECKBOX: """
+  @TPL: """
   <div id="auto-jump">
     <div>
       <input type="checkbox" name="auto-jump" /> 自動枠移動
@@ -85,42 +111,61 @@ class AutoJump extends Base
   </div>
   """
 
+  @OPENTAB_STATUS:
+    'disable':
+      className: 'oepntab-disable'
+      msg: '無効'
+      next: 'tempDisable'
+    'tempDisable':
+      className: 'oepntab-tempDisable'
+      msg: '一時無効'
+      next: 'enable'
+    'enable':
+      className: 'oepntab-enable'
+      msg: '有効'
+      next: 'disable'
+
   # === Properties.
+  $el: null
   $checkbox: null
-  commuUrl: null
+  $toggleButton: null
   isCurrentLiveClosed: false
   checkTimer: null
 
-
+  # === Initialize.
   init: ->
     LOGGER.info 'Start auto jump.'
     super()
-    @commuUrl = $('#commu_info a').first().attr 'href'
-    # Insert checkbox element.
-    if @commuUrl
-      # On-air or time-shift.
-      $('#watch_player_top_box').after AutoJump.CHECKBOX
-    else
-      # Off-air.
-      @commuUrl = $('.smn a').first().attr 'href'
-      unless @commuUrl
-        LOGGER.info 'No avairable on official live.'
-        return
-      # Change css.
-      $('#bn_gbox').after AutoJump.CHECKBOX
-      $autoJumpDiv = $('#auto-jump').addClass 'auto-jump-gate'
+    unless @commuUrl and @commuId and @currentLiveId and @pageType
+      LOGGER.info "Not run in this page."
+      return false
+    @render()
+    @$el = $('#auto-jump')
+    @$checkbox = @$el.find('input:checkbox')
 
-    @$checkbox = $('#auto-jump input:checkbox')
-
-    LOGGER.info "commuUrl = #{@commuUrl}"
+    # Set opentab status.
+    if @isJoinCommunity()
+      LOGGER.info 'Joining this community.'
+      @renderOpentabStatus()
 
     # Check next on-air.
     if @config.enableAutoJump
       @$checkbox.attr 'checked', true
       @checkNextOnair()
       @checkTimer = setInterval @checkNextOnair, @config.autoJumpIntervalSec * 1000
-    return
+    return true
 
+  render: ->
+    tpl = AutoJump.TPL.replace '%commuId%', @commuId
+    # Insert checkbox element.
+    if @pageType is 'live'
+      $('#watch_player_top_box').after tpl
+    else if @pageType is 'gate'
+      # Change css.
+      $('#bn_gbox').after tpl
+      $autoJumpDiv = $('#auto-jump').addClass 'auto-jump-gate'
+    else
+      throw Error "Unknow page type #{@pageType}", location.href
 
   # === Event listeners.
   addEventListeners: ->
@@ -135,8 +180,16 @@ class AutoJump extends Base
       @checkTimer = setInterval @checkNextOnair, @config.autoJumpIntervalSec * 1000
     return
 
+  onToggleButton: (event) =>
+    className = @$toggleButton.attr 'class'
+    map = AutoJump.OPENTAB_STATUS
+    for own key, value of map
+      if value.className is className
+        @saveOpentabStatus value.next
+        @showOpentabStatus value.next
+        break
 
-  # === Action functions.
+  # === Auto jump functions.
   checkNextOnair: =>
     if @isCurrentLiveClosed
       @jumpNextOnair()
@@ -161,7 +214,6 @@ class AutoJump extends Base
       return
     return
 
-
   jumpNextOnair: ->
     LOGGER.info "HTTP Request(jumpNextOnair): #{@commuUrl}"
     httpRequest @commuUrl, (response) =>
@@ -181,6 +233,51 @@ class AutoJump extends Base
           # Move to new live page.
           location.replace nowLiveUrl
       return
+    return
+
+  # === Opentab functions.
+  isJoinCommunity: ->
+    if @pageType is 'live'
+      return $('span.favorite,span.favorite_ch_link').length is 0
+    else if @pageType is 'gate'
+      return $('.join a').length is 0
+    return false
+
+  renderOpentabStatus: ->
+    html = '<a href="javascript:void(0)">自動タブOPEN ('
+    html += @commuId
+    html += '): &nbsp;<span>???</span></a>'
+    @$el.find('div').append html
+    @$toggleButton = @$el.find 'a'
+    @$toggleButton.on 'click', @onToggleButton
+    chrome.runtime.sendMessage({
+        'target' : 'config',
+        'action' : 'getOpentabStatus',
+        'args'   : [@commuId]
+      }, (response) =>
+        status = response.res
+        @showOpentabStatus status
+        return
+    )
+    return
+
+  saveOpentabStatus: (status) ->
+    chrome.runtime.sendMessage({
+        'target' : 'config',
+        'action' : 'setOpentabStatus',
+        'args'   : [@commuId, status]
+      }, (response) =>
+        return
+    )
+    return
+
+  showOpentabStatus: (status) ->
+    LOGGER.log "Show openttab status: #{status}"
+    map = AutoJump.OPENTAB_STATUS
+    msg = map[status].msg
+    className = map[status].className
+    @$toggleButton.attr 'class', className
+    @$toggleButton.find('span').html msg
     return
 
 
@@ -204,7 +301,7 @@ class AutoEnter extends Base
     @$checkbox = $('#auto-enter input:checkbox')
     if @config.enableAutoEnter
       @$checkbox.attr 'checked', true
-    return
+    return true
 
   addEventListeners: ->
     $('#gates').on 'DOMSubtreeModified', @onDOMSubtreeModifiedGates
@@ -231,12 +328,12 @@ class History extends Base
     data.accessTime = (new Date).getTime()
     unless @validate data
       LOGGER.error "Validate error", data
-      return
+      return false
     @saveHistory data
-    return
+    return true
 
   getLiveDataForGate: ->
-    LOGGER.info "getLiveDataForGate() #{@currentLiveId}"
+    LOGGER.info "Saving history in gate page: #{@currentLiveId}"
     data = {}
     data.id = @currentLiveId
     data.title = $('.infobox h2 > span:first').text().trim()
@@ -261,7 +358,7 @@ class History extends Base
     return data
 
   getLiveDataForWatch: ->
-    LOGGER.info "getLiveDataForWatch() #{@currentLiveId}"
+    LOGGER.info "Saving history in live page: #{@currentLiveId}"
     data = {}
     data.id = @currentLiveId
     data.link = Base.LIVE_URL + data.id

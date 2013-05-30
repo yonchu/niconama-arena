@@ -3,6 +3,38 @@
   width: 100%;
   font-size: 120%;
 }
+#auto-jump a,
+#auto-enter a {
+  font-size: 85%;
+  cursor: auto;
+  vertical-align: middle;
+  margin-bottom: 5px;
+  margin-left: 20px;
+  padding: 3px 5px;
+  color: #FFF !important;
+  text-decoration: none !important;
+  display: inline-block;
+  text-shadow: 0 -1px 3px #202020;
+  border-right: 1px solid #5d5d5d;
+  border-left: 1px solid #929292;
+  border-bottom: 1px solid #575757;
+  border-top: 1px solid #797979;
+  background-image: -webkit-gradient(linear, left bottom, left top, color-stop(0, #3f3f3f), color-stop(0.5, #383838), color-stop(0.51, #434343), color-stop(1, #555555));
+  background-color: #383838;
+  -webkit-box-shadow: inset 0 0 5px 5px #535353;
+  box-shadow: inset 0 0 5px 5px #535353;
+  border-radius: 4px;
+}
+#auto-jump a:active,
+#auto-enter a:active {
+  color: #CCC !important;
+  background-image: -webkit-gradient(linear, left bottom, left top, color-stop(0, #787878), color-stop(0.5, #5e5e5e), color-stop(0.51, #707070), color-stop(1, #838383));
+  background-color: #5f5f5f;
+}
+#auto-jump a span,
+#auto-enter a span {
+  color: #FF9393;
+}
 #auto-jump > div,
 #auto-enter > div {
   width: 960px;
