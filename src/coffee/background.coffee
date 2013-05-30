@@ -1307,7 +1307,7 @@ class Official extends BaseLiveData
   #    open : no
   isCancelFethDetail: (item, now) ->
     return true if super item, now
-    if item.openTime and item.startTime
+    if item.startTime
       return true
     return false
 

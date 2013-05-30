@@ -1785,7 +1785,7 @@
       if (Official.__super__.isCancelFethDetail.call(this, item, now)) {
         return true;
       }
-      if (item.openTime && item.startTime) {
+      if (item.startTime) {
         return true;
       }
       return false;
