@@ -1,6 +1,13 @@
-LOGGER = new Logger
+exports = exports ? window ? @
+common = exports.CHEX.common
 
-class Notification
+LOGGER = new common.Logger
+
+# === ntf ===
+ntf = exports.namespace 'CHEX.ntf'
+
+
+ntf.Notification = class Notification
   @BEFORE_TIME_SEC: 300
 
   constructor: ->
@@ -11,14 +18,14 @@ class Notification
     return
 
   init: ->
-    @makeContent()
+    @render()
     return
 
-  makeContent: ->
+  render: ->
     index = location.hash.slice 1
     item = @liveChecker.getNotificationTarget index
     LOGGER.info "index = #{index}:", item
-    now = (new Date).getTime()
+    now = Date.now()
     @setTitle item.title, item.link
     @setThumnail item.thumnail, item.link
     @setTime item.openTime, item.startTime
@@ -38,8 +45,8 @@ class Notification
 
   setTime: (openTime, startTime) ->
     text = null
-    openTimeStr = @date2String openTime if openTime
-    startTimeStr = @date2String startTime if startTime
+    openTimeStr = common.date2String openTime if openTime
+    startTimeStr = common.date2String startTime if startTime
     if openTimeStr
       text = "開場: #{openTimeStr}"
       $('#open-time').html text
@@ -49,17 +56,6 @@ class Notification
       text = "開始: #{startTimeStr}"
       $('#start-time').html text
     return
-
-  date2String: (date) ->
-    mm = date.getMonth() + 1
-    dd = date.getDate()
-    hh = date.getHours()
-    min = date.getMinutes()
-    mm = '0' + mm if mm < 10
-    dd = '0' + dd if dd < 10
-    hh = '0' + hh if hh < 10
-    min = '0' + min if min < 10
-    "#{mm}/#{dd} #{hh}:#{min}"
 
   setStatus: (openTime, startTime, endTime, now) ->
     text = null
@@ -78,7 +74,7 @@ class Notification
       else if openTime and now > openTime
         # open gate
         text = 'まもなく放送開始'
-      else if openTime and now > openTime - Notification.BEFORE_TIME_SEC * 1000
+      else if openTime and now > openTime - ntf.Notification.BEFORE_TIME_SEC * 1000
         # before open gate
         text = 'まもなく開場'
     # Set status.
@@ -89,4 +85,4 @@ class Notification
     return
 
 
-notification = new Notification
+NOTIFICATION = new ntf.Notification

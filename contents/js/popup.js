@@ -1,157 +1,203 @@
 //@ sourceMappingURL=popup.map
 (function() {
-  var BaseTab, FavoriteTab, HistoryTab, LOGGER, LiveInfoHtml, LiveTab, OfficialTab, POPUP, Popup, SettingsTab, TimeshiftTab, date2String, generateBeforeMessage,
+  var BaseTab, FavoriteTab, HistoryTab, LOGGER, LiveInfoHtml, LiveTab, OfficialTab, POPUP, Popup, SettingsTab, TabManager, TimeshiftTab, Validator, common, exports, popup, _ref,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
+    _this = this;
 
-  LOGGER = new Logger;
+  exports = (_ref = exports != null ? exports : window) != null ? _ref : this;
 
-  date2String = function(date) {
-    var dd, hh, min, mm;
+  common = exports.CHEX.common;
 
-    mm = date.getMonth() + 1;
-    dd = date.getDate();
-    hh = date.getHours();
-    min = date.getMinutes();
-    if (mm < 10) {
-      mm = '0' + mm;
-    }
-    if (dd < 10) {
-      dd = '0' + dd;
-    }
-    if (hh < 10) {
-      hh = '0' + hh;
-    }
-    if (min < 10) {
-      min = '0' + min;
-    }
-    return "" + mm + "/" + dd + " " + hh + ":" + min;
-  };
+  LOGGER = new common.Logger;
 
-  generateBeforeMessage = function(now, targetTime) {
-    var d, delta, h, m, remainder, ret;
+  popup = exports.namespace('CHEX.popup');
 
-    delta = targetTime - now;
-    d = Math.floor(delta / (24 * 60 * 60 * 1000));
-    remainder = delta % (24 * 60 * 60 * 1000);
-    h = Math.floor(remainder / (60 * 60 * 1000));
-    remainder = delta % (60 * 60 * 1000);
-    m = Math.floor(remainder / (60 * 1000));
-    ret = '';
-    if (d > 0) {
-      ret += "" + d + " 日 ";
-    }
-    if (h > 0) {
-      ret += "" + h + " 時間 ";
-    }
-    if (m > 0) {
-      ret += "" + m + " 分";
-    }
-    return ret;
-  };
+  popup.TabManager = TabManager = (function(_super) {
+    __extends(TabManager, _super);
 
-  Popup = (function() {
-    Popup.LOADING_VIEW = "<div class=\"nowloading active\">\n  <p><img src=\"/icons/ajax-loader.gif\" alt=\"読込中...\" /></p>\n</div>";
+    TabManager.LOADING_VIEW = "<div class=\"nowloading active\">\n  <p><img src=\"/icons/ajax-loader.gif\" alt=\"読込中...\" /></p>\n</div>";
 
-    Popup.prototype.$updateButton = null;
-
-    Popup.prototype.tabs = [];
-
-    function Popup() {
-      this.onClickUpdateButton = __bind(this.onClickUpdateButton, this);
+    function TabManager(barElem, contentElem) {
+      this.barElem = barElem;
+      this.contentElem = contentElem;
       this.onClickTab = __bind(this.onClickTab, this);
-      var _this = this;
-
-      this.bg = chrome.extension.getBackgroundPage().bg;
-      this.config = chrome.extension.getBackgroundPage().config;
-      this.nicoInfo = chrome.extension.getBackgroundPage().nicoInfo;
-      this.history = chrome.extension.getBackgroundPage().history;
-      $(function() {
-        _this.init();
-      });
-      return;
+      TabManager.__super__.constructor.call(this);
+      this.tabs = {};
+      this.callbacks = {};
+      this.$tabbars = null;
+      this.$tabsContents = null;
     }
 
-    Popup.prototype.init = function() {
-      this.$updateButton = $('#update-button');
-      this.initTabs();
-      this.showTab(this.config.getSaveTabNum());
-      this.addEventListeners();
+    TabManager.prototype.initEventListeners = function() {
+      return this.$tabbars.on('click', this.onClickTab);
     };
 
-    Popup.prototype.initTabs = function() {
-      var $tab, $tabContent, i, tab, tabId, _i, _ref;
+    TabManager.prototype.onClickTab = function(event) {
+      var tabId;
 
-      this.$tabbars = $('#tabbar li');
-      this.$tabsContents = $('#tabs-content > div');
+      event.preventDefault();
+      tabId = $(event.target).attr('data-id');
+      this.showTab(tabId);
+      return this;
+    };
+
+    TabManager.prototype.getTab = function(tabId) {
+      if (!(tabId && this.tabs[tabId])) {
+        LOGGER.log("" + tabId + " is not registered.");
+        return null;
+      }
+      return this.tabs[tabId];
+    };
+
+    TabManager.prototype.getFirstTab = function() {
+      var min, minTab, tab, tabId, _ref1;
+
+      min = null;
+      minTab = null;
+      _ref1 = this.tabs;
+      for (tabId in _ref1) {
+        if (!__hasProp.call(_ref1, tabId)) continue;
+        tab = _ref1[tabId];
+        if ((min == null) || tab.tabNum < min) {
+          min = tab.tabNum;
+          minTab = tab;
+        }
+      }
+      return minTab;
+    };
+
+    TabManager.prototype.activateTab = function(targetTabId) {
+      var tab, tabId, _ref1;
+
+      _ref1 = this.tabs;
+      for (tabId in _ref1) {
+        if (!__hasProp.call(_ref1, tabId)) continue;
+        tab = _ref1[tabId];
+        tab.isActive = tabId === targetTabId;
+        if (tabId === targetTabId) {
+          tab.$tab.addClass('active').siblings().removeClass('active');
+        }
+      }
+      this.$loading.show().siblings().hide();
+      return this;
+    };
+
+    TabManager.prototype.register = function(tab) {
+      var tabId;
+
+      tabId = tab.tabId;
+      if (this.tabs[tabId]) {
+        throw Error("" + tabId + " is already registered.");
+      }
+      this.tabs[tabId] = tab;
+      return this;
+    };
+
+    TabManager.prototype.onChangeTab = function(callback, callbackObj) {
+      this.addEventListener('changeTab', callback, callbackObj);
+      return this;
+    };
+
+    TabManager.prototype.initTabs = function() {
+      var $tab, $tabContent, i, parent, tab, tabId, _i, _ref1;
+
+      this.$tabbars = $(this.barElem);
+      this.$tabsContents = $(this.contentElem);
       console.assert(this.$tabbars.size() === this.$tabsContents.size());
-      for (i = _i = 0, _ref = this.$tabbars.size() - 1; 0 <= _ref ? _i <= _ref : _i >= _ref; i = 0 <= _ref ? ++_i : --_i) {
+      for (i = _i = 0, _ref1 = this.$tabbars.size() - 1; 0 <= _ref1 ? _i <= _ref1 : _i >= _ref1; i = 0 <= _ref1 ? ++_i : --_i) {
         $tab = this.$tabbars.eq(i);
         $tabContent = this.$tabsContents.eq(i);
-        $tab.attr('title', i);
         tabId = $tabContent.attr('id');
-        if (!this.config.isNiconamaEnabled(tabId)) {
+        tab = this.getTab(tabId);
+        if (!tab) {
           $tab.css('display', 'none');
           continue;
         }
-        tab = this.createTab(tabId);
         tab.tabNum = i;
         tab.$tab = $tab;
         tab.$tabContent = $tabContent;
+        tab.onComplete(this.showTabContent, this);
+        tab.initOnce();
         tab.init();
-        this.tabs[i] = tab;
       }
-      $("#tabs-content").append(Popup.LOADING_VIEW);
+      parent = $(this.contentElem).parent();
+      parent.append(popup.TabManager.LOADING_VIEW);
+      this.$loading = parent.find('.nowloading');
+      this.initEventListeners();
+      return this;
     };
 
-    Popup.prototype.createTab = function(tabId) {
+    TabManager.prototype.showTab = function(tabId) {
       var tab;
 
-      if (tabId === 'settings') {
-        tab = new SettingsTab(tabId, this.config);
-      } else if (tabId === 'official') {
-        tab = new OfficialTab(tabId, this.config, this.nicoInfo);
-      } else if (tabId === 'favorite') {
-        tab = new FavoriteTab(tabId, this.config, this.nicoInfo);
-      } else if (tabId === 'timeshift') {
-        tab = new TimeshiftTab(tabId, this.config, this.nicoInfo);
-      } else if (tabId === 'history') {
-        tab = new HistoryTab(tabId, this.config, this.history);
-      } else {
-        tab = new BaseTab(tabId, this.config);
+      tab = this.getTab(tabId);
+      if (!tab) {
+        tab = this.getFirstTab();
       }
-      return tab;
+      tabId = tab.tabId;
+      this.activateTab(tabId);
+      tab.showTab();
+      this.dispatchEvent('changeTab', [tabId]);
+      return this;
     };
 
-    Popup.prototype.showTab = function(num) {
-      var tab, tmpTab, _i, _len, _ref;
+    TabManager.prototype.showTabContent = function(tab) {
+      tab.$tabContent.fadeIn(100).siblings().hide();
+      return this;
+    };
 
-      tab = this.tabs[num];
-      if (!tab) {
-        throw new Error("Error: Can not show tab " + num);
-      }
-      if (!tab) {
-        this.showTab(parseInt(num) + 1);
-        return;
-      }
-      _ref = this.tabs;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        tmpTab = _ref[_i];
-        if (!tmpTab) {
-          continue;
+    TabManager.prototype.updateAllTabs = function() {
+      var tab, tabId, _ref1;
+
+      _ref1 = this.tabs;
+      for (tabId in _ref1) {
+        if (!__hasProp.call(_ref1, tabId)) continue;
+        tab = _ref1[tabId];
+        tab.init();
+        if (tab.isActive) {
+          this.showTab(tab.tabId);
         }
-        tmpTab.isActive = false;
       }
-      tab.isActive = true;
-      tab.showTab();
-      this.setLastUpdateTime(tab.tabId);
+      return this;
+    };
+
+    return TabManager;
+
+  })(common.EventDispatcher);
+
+  popup.Popup = Popup = (function() {
+    function Popup(config, nicoInfo) {
+      this.config = config;
+      this.nicoInfo = nicoInfo;
+      this.onClickUpdateButton = __bind(this.onClickUpdateButton, this);
+      this.tabManager = new popup.TabManager('#tabbar li', '#tabs-content > div');
+      this.$updateButton = null;
+    }
+
+    Popup.prototype.registerTab = function(tab) {
+      this.tabManager.register(tab);
+      return this;
+    };
+
+    Popup.prototype.showPopup = function() {
+      this.init();
+      return this;
+    };
+
+    Popup.prototype.init = function() {
+      this.$updateButton = $('#update-button');
+      this.tabManager.initTabs();
+      this.initEventListeners();
+      this.tabManager.showTab(this.config.getSaveTabId());
+      return this;
     };
 
     Popup.prototype.setLastUpdateTime = function(tabId) {
       var date, hh, min, sec;
 
-      date = this.nicoInfo.getLasetUpdateTime(tabId);
+      date = this.nicoInfo.getLastUpdateTime(tabId);
       hh = '??';
       min = '??';
       sec = '??';
@@ -172,22 +218,19 @@
       this.$updateButton.attr('title', "更新時間 " + hh + ":" + min + ":" + sec);
     };
 
-    Popup.prototype.addEventListeners = function() {
-      this.$tabbars.on('click', this.onClickTab);
+    Popup.prototype.initEventListeners = function() {
       this.$updateButton.on('click', this.onClickUpdateButton);
+      this.tabManager.onChangeTab(this.onChangeTab, this);
+      return this;
     };
 
-    Popup.prototype.onClickTab = function(event) {
-      var tabNum;
-
-      event.preventDefault();
-      tabNum = $(event.target).attr('title');
-      this.showTab(tabNum);
-      this.config.setSaveTabNum(tabNum);
+    Popup.prototype.onChangeTab = function(tabId) {
+      this.config.setSaveTabId(tabId);
+      this.setLastUpdateTime(tabId);
     };
 
     Popup.prototype.onClickUpdateButton = function(event) {
-      var $target, tab, _i, _len, _ref,
+      var $target,
         _this = this;
 
       $target = $(event.target);
@@ -199,14 +242,7 @@
         text: ''
       });
       this.nicoInfo.updateAll(true, false);
-      _ref = this.tabs;
-      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-        tab = _ref[_i];
-        tab.init();
-        if (tab.isActive) {
-          this.showTab(tab.tabNum);
-        }
-      }
+      this.tabManager.updateAllTabs();
       setTimeout(function() {
         _this.$updateButton.attr('class', 'active-button');
       }, 60 * 1000);
@@ -216,43 +252,40 @@
 
   })();
 
-  BaseTab = (function() {
-    BaseTab.prototype.tabNum = -1;
-
-    BaseTab.prototype.$tab = null;
-
-    BaseTab.prototype.$tabContent = null;
-
-    BaseTab.prototype.isActive = false;
+  popup.BaseTab = BaseTab = (function(_super) {
+    __extends(BaseTab, _super);
 
     function BaseTab(tabId, config) {
       this.tabId = tabId;
       this.config = config;
-      this.addEventListeners();
+      BaseTab.__super__.constructor.call(this);
+      this.tabNum = -1;
+      this.$tab = null;
+      this.$tabContent = null;
+      this.isActive = false;
     }
 
-    BaseTab.prototype.addEventListeners = function() {};
+    BaseTab.prototype.initEventListeners = function() {
+      return this;
+    };
 
-    BaseTab.prototype.init = function() {};
+    BaseTab.prototype.initOnce = function() {
+      this.initEventListeners();
+      return this;
+    };
+
+    BaseTab.prototype.init = function() {
+      return this;
+    };
 
     BaseTab.prototype.showTab = function() {
-      this.$tab.addClass('active').siblings().removeClass('active');
-      this.beforeShowTab();
-      if (this._showTab()) {
-        this.afterShowTab();
-      }
+      this.showTabContent();
+      return this;
     };
 
-    BaseTab.prototype._showTab = function() {
-      return true;
-    };
-
-    BaseTab.prototype.beforeShowTab = function() {
-      $("#tabs-content > .nowloading").show().siblings().hide();
-    };
-
-    BaseTab.prototype.afterShowTab = function() {
-      this.$tabContent.fadeIn(100).siblings().hide();
+    BaseTab.prototype.showTabContent = function() {
+      this.dispatchEvent('complete', this);
+      return this;
     };
 
     BaseTab.prototype.showTabBadge = function(text) {
@@ -260,20 +293,24 @@
 
       disp = text ? 'block' : 'none';
       this.$tab.find('.tab-badge').css('display', disp).text(text);
+      return this;
+    };
+
+    BaseTab.prototype.onComplete = function(callback, callbackObj) {
+      this.addEventListener('complete', callback, callbackObj);
+      return this;
     };
 
     return BaseTab;
 
-  })();
+  })(common.EventDispatcher);
 
-  LiveInfoHtml = (function() {
+  popup.LiveInfoHtml = LiveInfoHtml = (function() {
     LiveInfoHtml.NOT_WATCH_THUMNAIL = 'http://res.nimg.jp/img/common/video_deleted_ja-jp.jpg';
 
     LiveInfoHtml.NO_IMAGE_THUMNAIL = 'http://icon.nimg.jp/404.jpg';
 
     LiveInfoHtml.BEFORE_TIME_SEC = 300;
-
-    LiveInfoHtml.prototype.html = null;
 
     function LiveInfoHtml(item, now) {
       this.item = item;
@@ -293,16 +330,18 @@
       this.setThumnail();
       this.setTime();
       this.setStatus();
+      return this;
     };
 
     LiveInfoHtml.prototype.setThumnail = function() {
       if (this.item.thumnail) {
         this.html.thumnail = this.item.thumnail;
       } else if (this.item.flag && this.item.flag === 'disable') {
-        this.html.thumnail = LiveInfoHtml.NOT_WATCH_THUMNAIL;
+        this.html.thumnail = popup.LiveInfoHtml.NOT_WATCH_THUMNAIL;
       } else {
         this.html.thumnail = '';
       }
+      return this;
     };
 
     LiveInfoHtml.prototype.setTime = function() {
@@ -310,27 +349,28 @@
 
       time = '';
       if (this.item.openTime) {
-        openTimeStr = date2String(this.item.openTime);
+        openTimeStr = common.date2String(this.item.openTime);
       }
       if (this.item.startTime) {
-        startTimeStr = date2String(this.item.startTime);
+        startTimeStr = common.date2String(this.item.startTime);
       }
       if (openTimeStr) {
         time = "開場: " + openTimeStr + " | 開演: " + startTimeStr;
       } else if (startTimeStr) {
         time = "開始: " + startTimeStr;
       }
-      return this.html.time = time;
+      this.html.time = time;
+      return this;
     };
 
     LiveInfoHtml.prototype.setStatus = function() {
-      var endTime, flags, openTime, startTime, status, _ref, _ref1, _ref2;
+      var endTime, flags, openTime, startTime, status, _ref1, _ref2, _ref3;
 
       status = '';
       flags = [];
-      openTime = (_ref = this.item.openTime) != null ? _ref.getTime() : void 0;
-      startTime = (_ref1 = this.item.startTime) != null ? _ref1.getTime() : void 0;
-      endTime = (_ref2 = this.item.endTime) != null ? _ref2.getTime() : void 0;
+      openTime = (_ref1 = this.item.openTime) != null ? _ref1.getTime() : void 0;
+      startTime = (_ref2 = this.item.startTime) != null ? _ref2.getTime() : void 0;
+      endTime = (_ref3 = this.item.endTime) != null ? _ref3.getTime() : void 0;
       if (endTime && this.now > endTime) {
         status = '放送は終了しました';
         flags.push('closed');
@@ -340,14 +380,14 @@
         } else if (openTime) {
           if (this.now > openTime) {
             status = 'まもなく放送開始';
-          } else if (this.now > openTime - LiveInfoHtml.BEFORE_TIME_SEC * 1000) {
+          } else if (this.now > openTime - popup.LiveInfoHtml.BEFORE_TIME_SEC * 1000) {
             status = 'まもなく開場';
           } else if (this.now < openTime) {
-            status = "開場まであと " + (generateBeforeMessage(this.now, openTime));
+            status = "開場まであと " + (common.remainingTime(this.now, openTime));
             flags.push('long-before');
           }
         } else if (this.now < startTime) {
-          status = "開始まであと " + (generateBeforeMessage(this.now, startTime));
+          status = "開始まであと " + (common.remainingTime(this.now, startTime));
           flags.push('long-before');
         }
       }
@@ -356,53 +396,35 @@
         flags.push(this.item.flag);
       }
       this.html.flag = flags.join(' ');
+      return this;
     };
 
     return LiveInfoHtml;
 
   })();
 
-  LiveTab = (function(_super) {
+  popup.LiveTab = LiveTab = (function(_super) {
     __extends(LiveTab, _super);
 
     LiveTab.CHECK_UPDATE_TIMER_INTERVAL_SEC = 3;
-
-    LiveTab.prototype.checkUpdateTimer = null;
 
     function LiveTab(tabId, config, nicoInfo) {
       this.nicoInfo = nicoInfo;
       this.checkUpdate = __bind(this.checkUpdate, this);
       LiveTab.__super__.constructor.call(this, tabId, config);
       this.$content = $("#" + this.tabId + " > ul");
+      this.checkUpdateTimer = null;
     }
 
-    LiveTab.prototype.addEventListeners = function() {
-      this.checkUpdateTimer = setInterval(this.checkUpdate, LiveTab.CHECK_UPDATE_TIMER_INTERVAL_SEC * 1000);
-    };
-
-    LiveTab.prototype.getData = function() {
-      return this.nicoInfo.getData(this.tabId);
-    };
-
-    LiveTab.prototype.getCache = function() {
-      return this.nicoInfo.getCache(this.tabId);
-    };
-
-    LiveTab.prototype.isUpdated = function(value) {
-      if (value != null) {
-        this.nicoInfo.isUpdated(this.tabId, value);
-      }
-      return this.nicoInfo.isUpdated(this.tabId);
-    };
-
-    LiveTab.prototype.countBadge = function() {
-      return this.nicoInfo.countBadge(this.tabId);
+    LiveTab.prototype.initEventListeners = function() {
+      this.checkUpdateTimer = setInterval(this.checkUpdate, popup.LiveTab.CHECK_UPDATE_TIMER_INTERVAL_SEC * 1000);
+      return this;
     };
 
     LiveTab.prototype.checkUpdate = function() {
       this.showTabBadge(this.countBadge());
       if (this.updateView()) {
-        this.afterShowTab();
+        this.showTabContent();
       }
     };
 
@@ -410,8 +432,11 @@
       this.showTabBadge(this.countBadge());
     };
 
-    LiveTab.prototype._showTab = function() {
-      return this.updateView(true);
+    LiveTab.prototype.showTab = function() {
+      if (this.updateView(true)) {
+        LiveTab.__super__.showTab.call(this);
+      }
+      return this;
     };
 
     LiveTab.prototype.updateView = function(force) {
@@ -445,10 +470,10 @@
         return false;
       }
       this.$content.html('');
-      now = (new Date).getTime();
+      now = Date.now();
       for (_i = 0, _len = viewData.length; _i < _len; _i++) {
         item = viewData[_i];
-        liveInfoHtml = new LiveInfoHtml(item, now);
+        liveInfoHtml = new popup.LiveInfoHtml(item, now);
         html = liveInfoHtml.getHtml();
         this.$content.append(html);
       }
@@ -459,11 +484,30 @@
       return true;
     };
 
+    LiveTab.prototype.getData = function() {
+      return this.nicoInfo.getData(this.tabId);
+    };
+
+    LiveTab.prototype.getCache = function() {
+      return this.nicoInfo.getCache(this.tabId);
+    };
+
+    LiveTab.prototype.isUpdated = function(value) {
+      if (value != null) {
+        this.nicoInfo.isUpdated(this.tabId, value);
+      }
+      return this.nicoInfo.isUpdated(this.tabId);
+    };
+
+    LiveTab.prototype.countBadge = function() {
+      return this.nicoInfo.countBadge(this.tabId);
+    };
+
     return LiveTab;
 
-  })(BaseTab);
+  })(popup.BaseTab);
 
-  FavoriteTab = (function(_super) {
+  popup.FavoriteTab = FavoriteTab = (function(_super) {
     __extends(FavoriteTab, _super);
 
     function FavoriteTab(tabId, config, nicoInfo) {
@@ -472,9 +516,9 @@
 
     return FavoriteTab;
 
-  })(LiveTab);
+  })(popup.LiveTab);
 
-  TimeshiftTab = (function(_super) {
+  popup.TimeshiftTab = TimeshiftTab = (function(_super) {
     __extends(TimeshiftTab, _super);
 
     function TimeshiftTab(tabId, config, nicoInfo) {
@@ -483,9 +527,9 @@
 
     return TimeshiftTab;
 
-  })(LiveTab);
+  })(popup.LiveTab);
 
-  OfficialTab = (function(_super) {
+  popup.OfficialTab = OfficialTab = (function(_super) {
     __extends(OfficialTab, _super);
 
     function OfficialTab(tabId, config, nicoInfo) {
@@ -494,9 +538,9 @@
 
     return OfficialTab;
 
-  })(LiveTab);
+  })(popup.LiveTab);
 
-  HistoryTab = (function(_super) {
+  popup.HistoryTab = HistoryTab = (function(_super) {
     __extends(HistoryTab, _super);
 
     function HistoryTab(tabId, config, history) {
@@ -505,11 +549,13 @@
       this.$content = $('#history-content');
     }
 
-    HistoryTab.prototype.addEventListeners = function() {};
+    HistoryTab.prototype.initEventListeners = function() {
+      return this;
+    };
 
-    HistoryTab.prototype._showTab = function() {
+    HistoryTab.prototype.showTab = function() {
       this.showHistory();
-      return true;
+      return HistoryTab.__super__.showTab.call(this);
     };
 
     HistoryTab.prototype.showHistory = function() {
@@ -528,12 +574,12 @@
         obj.link = hist.link;
         obj.thumnail = hist.thumnail || '';
         if (hist.accessTime) {
-          obj.accessTime = date2String(new Date(hist.accessTime));
+          obj.accessTime = common.date2String(new Date(hist.accessTime));
         } else {
           obj.accessTime = '';
         }
         if (hist.startTime) {
-          obj.startTime = date2String(new Date(hist.startTime));
+          obj.startTime = common.date2String(new Date(hist.startTime));
         } else {
           obj.startTime = '';
         }
@@ -541,13 +587,139 @@
         this.$content.append(html);
       }
       histories = null;
+      return this;
     };
 
     return HistoryTab;
 
-  })(BaseTab);
+  })(popup.BaseTab);
 
-  SettingsTab = (function(_super) {
+  popup.Validator = Validator = (function() {
+    Validator.prototype.checkers = {
+      isNonEmpty: {
+        validate: function(value) {
+          return value !== "";
+        },
+        instructions: "the value cannot be empty"
+      },
+      required: {
+        validate: function(value) {
+          return value != null;
+        },
+        instructions: "the value is required"
+      },
+      isNumber: {
+        validate: function(value) {
+          return !isNaN(value);
+        },
+        instructions: "the value can only be a valid number, e.g. 1, 3.14 or 2010"
+      },
+      isInteger: {
+        validate: function(value) {
+          if (value == null) {
+            return false;
+          }
+          value += '';
+          return !(value.match(/[^0-9]/g)) || (parseInt(value, 10)) + '' !== value;
+        },
+        instructions: "the value can only be a integer number, e.g. 0, 1"
+      },
+      isRangeNumber: {
+        validate: function(value, args) {
+          var max, min;
+
+          min = args.min;
+          max = args.max;
+          if (isNaN(value)) {
+            return false;
+          }
+          if (value < min) {
+            return false;
+          }
+          if (value > max) {
+            return false;
+          }
+          return true;
+        },
+        instructions: "the value can be more than %min% and less than %max%"
+      },
+      isRangeMinNumber: {
+        validate: function(value, args) {
+          var min;
+
+          min = args.min;
+          if (isNaN(value)) {
+            return false;
+          }
+          if (value < min) {
+            return false;
+          }
+          return true;
+        },
+        instructions: "the value can be more than %min%"
+      },
+      isAlphaNum: {
+        validate: function(value) {
+          return !/[^a-z0-9]/i.test(value);
+        },
+        instructions: "the value can only contain characters and numbers, no special symbols"
+      }
+    };
+
+    function Validator() {
+      this.messages = [];
+      this.config = {};
+    }
+
+    Validator.prototype.hasErrors = function() {
+      return this.messages.length !== 0;
+    };
+
+    Validator.prototype.getMessages = function() {
+      return this.messages.slice();
+    };
+
+    Validator.prototype.validate = function(data) {
+      var args, checker, msg, name, required, type, value;
+
+      name = data.name;
+      type = data.type;
+      checker = this.checkers[type];
+      value = data.value;
+      args = data.args || {};
+      required = data.required != null ? !!data.required : false;
+      if (!checker) {
+        throw Error("No handler to validate type " + type);
+      }
+      if (required) {
+        if (!this.checkers.required.validate.call(this, value)) {
+          msg = this.makeMessage(name, this.checkers.required.instructions);
+          this.messages.push = msg;
+        }
+      }
+      if (!checker.validate.call(this, value, args)) {
+        msg = this.makeMessage(name, checker.instructions, args);
+        this.messages.push(msg);
+      }
+      return this.hasErrors();
+    };
+
+    Validator.prototype.makeMessage = function(name, inst, args) {
+      var key, value;
+
+      for (key in args) {
+        if (!__hasProp.call(args, key)) continue;
+        value = args[key];
+        inst = inst.replace(RegExp("%" + key + "%", 'g'), value);
+      }
+      return "Invalid value for *" + name + "*, " + inst;
+    };
+
+    return Validator;
+
+  })();
+
+  popup.SettingsTab = SettingsTab = (function(_super) {
     __extends(SettingsTab, _super);
 
     function SettingsTab(tabId, config) {
@@ -564,58 +736,68 @@
       this.$settingOpentabBlacklist = $('#setting-opentab input:text');
     }
 
-    SettingsTab.prototype.addEventListeners = function() {
+    SettingsTab.prototype.initEventListeners = function() {
       $('#settings button[value="ok"]').on('click', this.onClickOkButton);
       $('#settings button[value="cancel"]').on('click', this.onClickCancelButton);
-    };
-
-    SettingsTab.prototype._showTab = function() {
-      this.restoreSettings();
-      return true;
-    };
-
-    SettingsTab.prototype.showMessage = function(msg, addClass) {
-      LOGGER.log('showMessage');
-      $('#settings-status').css('display', 'inline').addClass(addClass).text(msg);
-      setTimeout(this.hideMessage(addClass), 2000);
-      addClass = null;
-    };
-
-    SettingsTab.prototype.hideMessage = function(removeClass) {
-      var _this = this;
-
-      LOGGER.log('hideMessage');
-      return function(removeClass) {
-        $('#settings-status').css('display', 'none').removeClass(removeClass).text('');
-        removeClass = null;
-      };
+      return this;
     };
 
     SettingsTab.prototype.onClickOkButton = function(event) {
       var error;
 
-      try {
-        this.validate();
-        this.saveSettings();
-        this.config.saveSettings();
-        this.showMessage('保存しました', 'success');
-      } catch (_error) {
-        error = _error;
+      error = this.validate();
+      if (error && error.length > 0) {
         LOGGER.error('Could not save settings.', error);
-        if (error.stack) {
-          LOGGER.error(error.stack);
-        }
-        this.restoreSettings();
         this.showMessage('不正な値があります', 'failure');
+        return;
       }
+      this.saveSettings();
+      this.config.save();
+      this.showMessage('保存しました', 'success');
     };
 
     SettingsTab.prototype.onClickCancelButton = function(event) {
       this.restoreSettings();
     };
 
+    SettingsTab.prototype.showTab = function() {
+      this.restoreSettings();
+      return SettingsTab.__super__.showTab.call(this);
+    };
+
+    SettingsTab.prototype.validate = function() {
+      var data, validator;
+
+      validator = new popup.Validator;
+      data = {
+        name: '次枠チェック間隔',
+        type: 'isRangeMinNumber',
+        value: this.$autoJumpIntervalInput.val(),
+        args: {
+          min: 5
+        }
+      };
+      if (validator.validate(data)) {
+        return validator.getMessages();
+      }
+      return null;
+    };
+
+    SettingsTab.prototype.showMessage = function(msg, addClass) {
+      var $status;
+
+      LOGGER.log('showMessage');
+      $status = $('#settings-status');
+      $status.css('display', 'inline').addClass(addClass).text(msg);
+      setTimeout(function() {
+        $status.css('display', 'none').removeClass(addClass).text('');
+        return $status = null;
+      }, 2000);
+      return this;
+    };
+
     SettingsTab.prototype.saveSettings = function() {
-      var blacklist, checkbox, checkboxes, name, select, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2;
+      var blacklist, checkbox, checkboxes, name, select, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref1, _ref2, _ref3;
 
       this.config.setEnableAutoJump(this.$autoJumpCheckbox.prop('checked'));
       this.config.setAutoJumpIntervalSec(this.$autoJumpIntervalInput.val());
@@ -628,23 +810,23 @@
         this.config.setEnabledNiconamaSettings(name, value);
       }
       this.config.setNiconamaUpdateIntervalSec(this.$settingNiconamaUpdate.val());
-      _ref = this.$settingBadge;
-      for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
-        select = _ref[_j];
+      _ref1 = this.$settingBadge;
+      for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+        select = _ref1[_j];
         name = select.getAttribute('name');
         value = select.value;
         this.config.setBadgeEnable(name, value);
       }
-      _ref1 = this.$settingNotification;
-      for (_k = 0, _len2 = _ref1.length; _k < _len2; _k++) {
-        select = _ref1[_k];
+      _ref2 = this.$settingNotification;
+      for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
+        select = _ref2[_k];
         name = select.getAttribute('name');
         value = select.value;
         this.config.setNotificationEnable(name, value);
       }
-      _ref2 = this.$settingOpentabSelect;
-      for (_l = 0, _len3 = _ref2.length; _l < _len3; _l++) {
-        select = _ref2[_l];
+      _ref3 = this.$settingOpentabSelect;
+      for (_l = 0, _len3 = _ref3.length; _l < _len3; _l++) {
+        select = _ref3[_l];
         name = select.getAttribute('name');
         value = select.value;
         this.config.setOpentabEnable(name, value);
@@ -656,12 +838,10 @@
         blacklist = [];
       }
       this.config.setBlackList(blacklist);
-      checkboxes = null;
-      blacklist = null;
     };
 
     SettingsTab.prototype.restoreSettings = function() {
-      var blacklist, checkbox, checkboxes, name, select, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2;
+      var blacklist, checkbox, checkboxes, name, select, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref1, _ref2, _ref3;
 
       this.$autoJumpCheckbox.prop('checked', this.config.getEnableAutoJump());
       this.$autoJumpIntervalInput.val(this.config.getAutoJumpIntervalSec());
@@ -674,46 +854,57 @@
         checkbox.checked = value;
       }
       this.$settingNiconamaUpdate.val(this.config.getNiconamaUpdateIntervalSec());
-      _ref = this.$settingBadge;
-      for (_j = 0, _len1 = _ref.length; _j < _len1; _j++) {
-        select = _ref[_j];
+      _ref1 = this.$settingBadge;
+      for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+        select = _ref1[_j];
         name = select.getAttribute('name');
         value = this.config.getBadgeEnable(name);
         select.value = value;
       }
-      _ref1 = this.$settingNotification;
-      for (_k = 0, _len2 = _ref1.length; _k < _len2; _k++) {
-        select = _ref1[_k];
+      _ref2 = this.$settingNotification;
+      for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
+        select = _ref2[_k];
         name = select.getAttribute('name');
         value = this.config.getNotificationEnable(name);
         select.value = value;
       }
-      _ref2 = this.$settingOpentabSelect;
-      for (_l = 0, _len3 = _ref2.length; _l < _len3; _l++) {
-        select = _ref2[_l];
+      _ref3 = this.$settingOpentabSelect;
+      for (_l = 0, _len3 = _ref3.length; _l < _len3; _l++) {
+        select = _ref3[_l];
         name = select.getAttribute('name');
         value = this.config.getOpentabEnable(name);
         select.value = value;
       }
       blacklist = this.config.getBlackList();
       this.$settingOpentabBlacklist.val(blacklist.join(','));
-      checkboxes = null;
-      blacklist = null;
-    };
-
-    SettingsTab.prototype.validate = function() {
-      var value;
-
-      value = this.$autoJumpIntervalInput.val();
-      if (!value || value < 5) {
-        throw new Error('Validate error.');
-      }
     };
 
     return SettingsTab;
 
-  })(BaseTab);
+  })(popup.BaseTab);
 
-  POPUP = new Popup;
+  POPUP = null;
+
+  $(function() {
+    var config, history, nicoInfo, regTab;
+
+    config = chrome.extension.getBackgroundPage().config;
+    nicoInfo = chrome.extension.getBackgroundPage().nicoInfo;
+    history = chrome.extension.getBackgroundPage().history;
+    POPUP = new popup.Popup(config, nicoInfo);
+    regTab = function(tab) {
+      if (!config.isNiconamaEnabled(tab.tabId)) {
+        LOGGER.log("Tab " + tab.tabId + " is disable.");
+        return;
+      }
+      POPUP.registerTab(tab);
+    };
+    regTab(new popup.OfficialTab('official', config, nicoInfo));
+    regTab(new popup.OfficialTab('favorite', config, nicoInfo));
+    regTab(new popup.FavoriteTab('timeshift', config, nicoInfo));
+    regTab(new popup.HistoryTab('history', config, history));
+    regTab(new popup.SettingsTab('settings', config));
+    POPUP.showPopup();
+  });
 
 }).call(this);

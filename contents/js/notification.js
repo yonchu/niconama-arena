@@ -1,10 +1,16 @@
 //@ sourceMappingURL=notification.map
 (function() {
-  var LOGGER, Notification, notification;
+  var LOGGER, NOTIFICATION, Notification, common, exports, ntf, _ref;
 
-  LOGGER = new Logger;
+  exports = (_ref = exports != null ? exports : window) != null ? _ref : this;
 
-  Notification = (function() {
+  common = exports.CHEX.common;
+
+  LOGGER = new common.Logger;
+
+  ntf = exports.namespace('CHEX.ntf');
+
+  ntf.Notification = Notification = (function() {
     Notification.BEFORE_TIME_SEC = 300;
 
     function Notification() {
@@ -18,16 +24,16 @@
     }
 
     Notification.prototype.init = function() {
-      this.makeContent();
+      this.render();
     };
 
-    Notification.prototype.makeContent = function() {
+    Notification.prototype.render = function() {
       var index, item, now;
 
       index = location.hash.slice(1);
       item = this.liveChecker.getNotificationTarget(index);
       LOGGER.info("index = " + index + ":", item);
-      now = (new Date).getTime();
+      now = Date.now();
       this.setTitle(item.title, item.link);
       this.setThumnail(item.thumnail, item.link);
       this.setTime(item.openTime, item.startTime);
@@ -50,10 +56,10 @@
 
       text = null;
       if (openTime) {
-        openTimeStr = this.date2String(openTime);
+        openTimeStr = common.date2String(openTime);
       }
       if (startTime) {
-        startTimeStr = this.date2String(startTime);
+        startTimeStr = common.date2String(startTime);
       }
       if (openTimeStr) {
         text = "開場: " + openTimeStr;
@@ -64,28 +70,6 @@
         text = "開始: " + startTimeStr;
         $('#start-time').html(text);
       }
-    };
-
-    Notification.prototype.date2String = function(date) {
-      var dd, hh, min, mm;
-
-      mm = date.getMonth() + 1;
-      dd = date.getDate();
-      hh = date.getHours();
-      min = date.getMinutes();
-      if (mm < 10) {
-        mm = '0' + mm;
-      }
-      if (dd < 10) {
-        dd = '0' + dd;
-      }
-      if (hh < 10) {
-        hh = '0' + hh;
-      }
-      if (min < 10) {
-        min = '0' + min;
-      }
-      return "" + mm + "/" + dd + " " + hh + ":" + min;
     };
 
     Notification.prototype.setStatus = function(openTime, startTime, endTime, now) {
@@ -104,7 +88,7 @@
           text = 'ただいま放送中';
         } else if (openTime && now > openTime) {
           text = 'まもなく放送開始';
-        } else if (openTime && now > openTime - Notification.BEFORE_TIME_SEC * 1000) {
+        } else if (openTime && now > openTime - ntf.Notification.BEFORE_TIME_SEC * 1000) {
           text = 'まもなく開場';
         }
       }
@@ -120,6 +104,6 @@
 
   })();
 
-  notification = new Notification;
+  NOTIFICATION = new ntf.Notification;
 
 }).call(this);

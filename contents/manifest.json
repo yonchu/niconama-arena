@@ -43,7 +43,7 @@
     "css": ["css/autojump.css"],
     "js": [
       "js/lib/vendor/jquery/jquery.min.js",
-      "js/debug.js",
+      "js/common.js",
       "js/autojump.js",
       "js/lib/ga.js"
     ]

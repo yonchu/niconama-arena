@@ -5,7 +5,7 @@
   <meta http-equiv="Pragma" content="no-cache">
   <link rel="stylesheet" type="text/css" href="/css/popup.css" />
   <script src="/js/lib/vendor/jquery/jquery.min.js"></script>
-  <script src="/js/debug.js"></script>
+  <script src="/js/common.js"></script>
   <script src="/js/popup-tmpl.js"></script>
   <script src="/js/popup.js"></script>
 </head>
@@ -60,7 +60,7 @@
           <ul>
             <li>
               <input type="checkbox" id="setting-auto-jump" /> 自動枠移動
-              <label class="margin-left2" >チェック間隔(5〜): </label>
+              <label class="margin-left2" >チェック間隔(5秒〜): </label>
               <input type="number" id="setting-auto-jump-interval" /> 秒
             </li>
             <li>
@@ -91,6 +91,7 @@
                 <option value="1800">30分</option>
                 <option value="36000">60分</option>
               </select>
+              <span>&nbsp;※ お気に入りの更新間隔は2分固定です</span>
             </li>
 
             <li id="setting-badge">

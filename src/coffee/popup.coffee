@@ -1,115 +1,156 @@
-LOGGER = new Logger
+exports = exports ? window ? @
+common = exports.CHEX.common
 
-date2String = (date) ->
-  mm = date.getMonth() + 1
-  dd = date.getDate()
-  hh = date.getHours()
-  min = date.getMinutes()
-  mm = '0' + mm if mm < 10
-  dd = '0' + dd if dd < 10
-  hh = '0' + hh if hh < 10
-  min = '0' + min if min < 10
-  "#{mm}/#{dd} #{hh}:#{min}"
+LOGGER = new common.Logger
+
+# === popup ===
+popup = exports.namespace 'CHEX.popup'
 
 
-generateBeforeMessage = (now, targetTime) ->
-  delta = targetTime - now
-  d = Math.floor delta / (24 * 60 * 60 * 1000)
-  remainder = delta % (24 * 60 * 60 * 1000)
-  h = Math.floor remainder / (60 * 60 * 1000)
-  remainder = delta % (60 * 60 * 1000)
-  m = Math.floor remainder / (60 * 1000)
-  ret = ''
-  if d > 0
-    ret += "#{d} 日 "
-  if h > 0
-    ret += "#{h} 時間 "
-  if m > 0
-    ret += "#{m} 分"
-  return ret
-
-
-class Popup
+popup.TabManager = class TabManager extends common.EventDispatcher
   @LOADING_VIEW: """
   <div class="nowloading active">
     <p><img src="/icons/ajax-loader.gif" alt="読込中..." /></p>
   </div>
   """
 
-  $updateButton: null
-  tabs: []
+  # === Constructor.
+  constructor: (@barElem, @contentElem) ->
+    super()
+    # === Properties.
+    @tabs = {}
+    @callbacks = {}
+    # Elements.
+    @$tabbars = null
+    @$tabsContents = null
 
-  constructor: ->
-    @bg = chrome.extension.getBackgroundPage().bg
-    @config = chrome.extension.getBackgroundPage().config
-    @nicoInfo = chrome.extension.getBackgroundPage().nicoInfo
-    @history = chrome.extension.getBackgroundPage().history
-    $ =>
-      @init()
-      return
-    return
+  # === Event listeners.
+  initEventListeners: ->
+    @$tabbars.on 'click', @onClickTab
 
-  init: ->
-    @$updateButton = $('#update-button')
-    @initTabs()
-    @showTab @config.getSaveTabNum()
-    @addEventListeners()
-    return
+  onClickTab: (event) =>
+    event.preventDefault()
+    tabId = $(event.target).attr 'data-id'
+    @showTab tabId
+    return @
+
+  # === Private methods for @tabs.
+  getTab: (tabId) ->
+    unless tabId and @tabs[tabId]
+      LOGGER.log "#{tabId} is not registered."
+      return null
+    return @tabs[tabId]
+
+  getFirstTab: ->
+    min = null
+    minTab = null
+    for own tabId, tab of @tabs
+      if not min? or tab.tabNum < min
+        min = tab.tabNum
+        minTab = tab
+    return minTab
+
+  activateTab: (targetTabId) ->
+    for own tabId, tab of @tabs
+      tab.isActive = tabId is targetTabId
+      if tabId is targetTabId
+        # Activate tab bar.
+        tab.$tab.addClass('active').siblings().removeClass 'active'
+    # Show loading view.
+    @$loading.show().siblings().hide()
+    return @
+
+  # === Public methods.
+  register: (tab) ->
+    tabId = tab.tabId
+    if @tabs[tabId]
+      throw Error "#{tabId} is already registered."
+    @tabs[tabId] = tab
+    return @
+
+  onChangeTab: (callback, callbackObj) ->
+    @addEventListener 'changeTab', callback, callbackObj
+    return @
 
   initTabs: ->
-    @$tabbars = $('#tabbar li')
-    @$tabsContents = $('#tabs-content > div')
+    @$tabbars = $(@barElem)
+    @$tabsContents = $(@contentElem)
     console.assert @$tabbars.size() is @$tabsContents.size()
     for i in [0..@$tabbars.size()-1]
       $tab = @$tabbars.eq i
       $tabContent = @$tabsContents.eq i
-      $tab.attr 'title', i
       tabId = $tabContent.attr 'id'
-      unless @config.isNiconamaEnabled tabId
+      tab = @getTab tabId
+      unless tab
         $tab.css 'display', 'none'
         continue
-      tab = @createTab tabId
       tab.tabNum = i
       tab.$tab = $tab
       tab.$tabContent = $tabContent
+      tab.onComplete @showTabContent, @
+      # Initialize tab.
+      tab.initOnce()
       tab.init()
-      @tabs[i] = tab
     # Append loading view.
-    $("#tabs-content").append Popup.LOADING_VIEW
-    return
+    parent = $(@contentElem).parent()
+    parent.append popup.TabManager.LOADING_VIEW
+    @$loading = parent.find('.nowloading')
+    @initEventListeners()
+    return @
 
-  createTab: (tabId) ->
-    if tabId is 'settings'
-      tab = new SettingsTab tabId, @config
-    else if tabId is 'official'
-      tab = new OfficialTab tabId, @config, @nicoInfo
-    else if tabId is 'favorite'
-      tab = new FavoriteTab tabId, @config, @nicoInfo
-    else if tabId is 'timeshift'
-      tab = new TimeshiftTab tabId, @config, @nicoInfo
-    else if tabId is 'history'
-      tab = new HistoryTab tabId, @config, @history
-    else
-      tab = new BaseTab tabId, @config
-    return tab
-
-  showTab: (num) ->
-    tab = @tabs[num]
+  showTab: (tabId) ->
+    tab = @getTab tabId
     unless tab
-      throw new Error "Error: Can not show tab #{num}"
-    unless tab
-      @showTab parseInt(num) + 1
-      return
-    for tmpTab in @tabs
-      continue unless tmpTab
-      tmpTab.isActive = false
-    tab.isActive = true
+      tab = @getFirstTab()
+    tabId = tab.tabId
+    # Activate tab.
+    @activateTab tabId
     tab.showTab()
-    @setLastUpdateTime(tab.tabId)
-    return
+    @dispatchEvent 'changeTab', [tabId]
+    return @
+
+  showTabContent: (tab) ->
+    tab.$tabContent.fadeIn(100).siblings().hide()
+    # show().siblings().hide()
+    # slideDown(400).siblings().hide()
+    return @
+
+  updateAllTabs: ->
+    for own tabId, tab of @tabs
+      tab.init()
+      if tab.isActive
+        @showTab tab.tabId
+    return @
+
+
+popup.Popup = class Popup
+  # === Constructor.
+  constructor: (@config, @nicoInfo) ->
+    # === Properties.
+    @tabManager = new popup.TabManager '#tabbar li', '#tabs-content > div'
+    # Elements.
+    @$updateButton = null
+
+  # === Public methods.
+  registerTab: (tab) ->
+    @tabManager.register tab
+    return @
+
+  showPopup: ->
+    @init()
+    return @
+
+  # === Initialize.
+  init: ->
+    @$updateButton = $('#update-button')
+    @tabManager.initTabs()
+    @initEventListeners()
+    # Show tab.
+    @tabManager.showTab @config.getSaveTabId()
+    return @
 
   setLastUpdateTime: (tabId) ->
-    date = @nicoInfo.getLasetUpdateTime(tabId)
+    date = @nicoInfo.getLastUpdateTime(tabId)
     hh = '??'
     min = '??'
     sec = '??'
@@ -123,16 +164,15 @@ class Popup
     @$updateButton.attr 'title', "更新時間 #{hh}:#{min}:#{sec}"
     return
 
-  addEventListeners: ->
-    @$tabbars.on 'click', @onClickTab
+  # === Event Listeners.
+  initEventListeners: ->
     @$updateButton.on 'click', @onClickUpdateButton
-    return
+    @tabManager.onChangeTab @onChangeTab, @
+    return @
 
-  onClickTab: (event) =>
-    event.preventDefault()
-    tabNum = $(event.target).attr 'title'
-    @showTab tabNum
-    @config.setSaveTabNum tabNum
+  onChangeTab: (tabId) ->
+    @config.setSaveTabId tabId
+    @setLastUpdateTime tabId
     return
 
   onClickUpdateButton: (event) =>
@@ -142,10 +182,7 @@ class Popup
     $target.attr 'class', 'inactive-button'
     chrome.browserAction.setBadgeText text: ''
     @nicoInfo.updateAll true, false
-    for tab in @tabs
-      tab.init()
-      if tab.isActive
-        @showTab tab.tabNum
+    @tabManager.updateAllTabs()
     setTimeout(=>
       @$updateButton.attr 'class', 'active-button'
       return
@@ -153,61 +190,63 @@ class Popup
     return
 
 
-class BaseTab
-  tabNum: -1
-  $tab: null
-  $tabContent: null
-  isActive: false
-
+popup.BaseTab = class BaseTab extends common.EventDispatcher
+  # === Constructor.
   constructor: (@tabId, @config) ->
-    @addEventListeners()
+    super()
+    # === Properties.
+    @tabNum = -1
+    @$tab = null
+    @$tabContent = null
+    @isActive = false
 
-  addEventListeners: ->
-    return
+  # === Event listeners.
+  initEventListeners: ->
+    return @
+
+  # === Initialize.
+  initOnce: ->
+    @initEventListeners()
+    return @
 
   init: ->
-    return
+    return @
 
+  # === Public methods.
   showTab: ->
-    @$tab.addClass('active').siblings().removeClass 'active'
-    @beforeShowTab()
-    if @_showTab()
-      @afterShowTab()
-    return
+    @showTabContent()
+    return @
 
-  _showTab: ->
-    return true
+  showTabContent: ->
+    @dispatchEvent 'complete', @
+    return @
 
-  beforeShowTab: ->
-    $("#tabs-content > .nowloading").show().siblings().hide()
-    return
-
-  afterShowTab: ->
-    # tab.content.show().siblings().hide()
-    @$tabContent.fadeIn(100).siblings().hide()
-    # tab.content.slideDown(400).siblings().hide()
-    return
-
-  showTabBadge: (text)->
+  showTabBadge: (text) ->
     disp = if text then 'block' else 'none'
     @$tab.find('.tab-badge').css('display', disp).text text
-    return
+    return @
+
+  onComplete: (callback, callbackObj) ->
+    @addEventListener 'complete', callback, callbackObj
+    return @
 
 
-class LiveInfoHtml
+popup.LiveInfoHtml = class LiveInfoHtml
   @NOT_WATCH_THUMNAIL: 'http://res.nimg.jp/img/common/video_deleted_ja-jp.jpg'
   @NO_IMAGE_THUMNAIL: 'http://icon.nimg.jp/404.jpg'
   @BEFORE_TIME_SEC: 300
 
-  html: null
-
+  # === Constructor.
   constructor: (@item, @now) ->
+    # === Properties.
     @html = {}
     @make()
 
+  # === Public methods.
   getHtml: ->
     return TMPL['liveInfo'] @html
 
+  # === Helper methods.
   make: ->
     @html.title = @item.title or ''
     @html.link = @item.link or ''
@@ -215,26 +254,27 @@ class LiveInfoHtml
     @setThumnail()
     @setTime()
     @setStatus()
-    return
+    return @
 
   setThumnail: ->
     if @item.thumnail
       @html.thumnail = @item.thumnail
     else if @item.flag and @item.flag is 'disable'
-      @html.thumnail = LiveInfoHtml.NOT_WATCH_THUMNAIL
+      @html.thumnail = popup.LiveInfoHtml.NOT_WATCH_THUMNAIL
     else
       @html.thumnail = ''
-    return
+    return @
 
   setTime: ->
     time = ''
-    openTimeStr = date2String @item.openTime if @item.openTime
-    startTimeStr = date2String @item.startTime if @item.startTime
+    openTimeStr = common.date2String @item.openTime if @item.openTime
+    startTimeStr = common.date2String @item.startTime if @item.startTime
     if openTimeStr
       time = "開場: #{openTimeStr} | 開演: #{startTimeStr}"
     else if startTimeStr
       time = "開始: #{startTimeStr}"
     @html.time = time
+    return @
 
   setStatus: ->
     status = ''
@@ -254,70 +294,62 @@ class LiveInfoHtml
         if @now > openTime
           # open gate
           status = 'まもなく放送開始'
-        else if @now > openTime - LiveInfoHtml.BEFORE_TIME_SEC * 1000
+        else if @now > openTime - popup.LiveInfoHtml.BEFORE_TIME_SEC * 1000
           # before open gate
           status = 'まもなく開場'
         else if @now < openTime
-          status = "開場まであと #{generateBeforeMessage @now, openTime}"
+          status = "開場まであと #{common.remainingTime @now, openTime}"
           flags.push 'long-before'
       else if @now < startTime
-          status = "開始まであと #{generateBeforeMessage @now, startTime}"
+          status = "開始まであと #{common.remainingTime @now, startTime}"
           flags.push 'long-before'
     # Set status.
     @html.status = status
     # Set flag.
     flags.push @item.flag if @item.flag
     @html.flag = flags.join ' '
-    return
+    return @
 
 
-class LiveTab extends BaseTab
+popup.LiveTab = class LiveTab extends popup.BaseTab
   @CHECK_UPDATE_TIMER_INTERVAL_SEC: 3
-  checkUpdateTimer: null
 
+  # === Constructor.
   constructor: (tabId, config, @nicoInfo) ->
     super tabId, config
+    # === Properties.
     @$content = $("##{@tabId} > ul")
+    @checkUpdateTimer = null
 
-  addEventListeners: ->
+  # === Event listeners.
+  initEventListeners: ->
     @checkUpdateTimer = setInterval @checkUpdate,
-      LiveTab.CHECK_UPDATE_TIMER_INTERVAL_SEC * 1000
-    return
-
-  getData: ->
-    return @nicoInfo.getData @tabId
-
-  getCache: ->
-    return @nicoInfo.getCache @tabId
-
-  isUpdated: (value) ->
-    if value?
-      @nicoInfo.isUpdated @tabId, value
-    return @nicoInfo.isUpdated @tabId
-
-  countBadge: ->
-    return @nicoInfo.countBadge @tabId
+      popup.LiveTab.CHECK_UPDATE_TIMER_INTERVAL_SEC * 1000
+    return @
 
   checkUpdate: =>
     # Set tab badge.
     @showTabBadge @countBadge()
     if @updateView()
-      @afterShowTab()
+      @showTabContent()
     return
 
-  # override
+  # === Initialize.
+  # Override.
   init: ->
     # Set tab badge.
     @showTabBadge @countBadge()
     return
 
-  # override
-  _showTab: ->
-    return @updateView true
+  # Override.
+  showTab: ->
+    if @updateView true
+      super()
+    return @
 
+  # === Helper methods.
   updateView: (force=false) ->
     # LOGGER.log "updateView #{@tabId}"
-
     unless @isActive
       LOGGER.log "Cancel updateView: not active #{@tabId}"
       return false
@@ -344,9 +376,9 @@ class LiveTab extends BaseTab
       return false
 
     @$content.html ''
-    now = (new Date).getTime()
+    now = Date.now()
     for item in viewData
-      liveInfoHtml = new LiveInfoHtml item, now
+      liveInfoHtml = new popup.LiveInfoHtml item, now
       html = liveInfoHtml.getHtml()
       @$content.append html
     @isUpdated false
@@ -355,37 +387,58 @@ class LiveTab extends BaseTab
     viewData = null
     return true
 
+  getData: ->
+    return @nicoInfo.getData @tabId
 
-class FavoriteTab extends LiveTab
+  getCache: ->
+    return @nicoInfo.getCache @tabId
+
+  isUpdated: (value) ->
+    if value?
+      @nicoInfo.isUpdated @tabId, value
+    return @nicoInfo.isUpdated @tabId
+
+  countBadge: ->
+    return @nicoInfo.countBadge @tabId
+
+
+popup.FavoriteTab = class FavoriteTab extends popup.LiveTab
   constructor: (tabId, config, nicoInfo) ->
     super tabId, config, nicoInfo
 
-class TimeshiftTab extends LiveTab
+popup.TimeshiftTab = class TimeshiftTab extends popup.LiveTab
   constructor: (tabId, config, nicoInfo) ->
     super tabId, config, nicoInfo
 
-class OfficialTab extends LiveTab
+popup.OfficialTab = class OfficialTab extends popup.LiveTab
   constructor: (tabId, config, nicoInfo) ->
     super tabId, config, nicoInfo
 
-class HistoryTab extends BaseTab
+popup.HistoryTab = class HistoryTab extends popup.BaseTab
+  # === Constructor.
   constructor: (tabId, config, @history) ->
     super tabId, config
+    # === Properties.
     @$content = $('#history-content')
 
-  addEventListeners: ->
-    return
+  # === Event listeners.
+  initEventListeners: ->
+    return @
 
-  # override
-  _showTab: ->
+  # === Public methods.
+  # Override.
+  showTab: ->
     @showHistory()
-    return true
+    return super()
 
+  # === Helper methods.
   showHistory: ->
+    # Clear content.
     @$content.html ''
     histories = @history.getHistories()
     LOGGER.log "Show history", histories
     for hist in histories
+      # Make object for html template.
       obj = {}
       unless hist.title and hist.link
         continue
@@ -393,22 +446,118 @@ class HistoryTab extends BaseTab
       obj.link = hist.link
       obj.thumnail = hist.thumnail or ''
       if hist.accessTime
-        obj.accessTime = date2String (new Date hist.accessTime)
+        obj.accessTime = common.date2String (new Date hist.accessTime)
       else
         obj.accessTime = ''
       if hist.startTime
-        obj.startTime = date2String (new Date hist.startTime)
+        obj.startTime = common.date2String (new Date hist.startTime)
       else
         obj.startTime = ''
+      # Make html from template.
       html = TMPL.history obj
       @$content.append html
     histories = null
-    return
+    return @
 
 
-class SettingsTab extends BaseTab
+## Validator
+popup.Validator = class Validator
+  checkers:
+    isNonEmpty:
+      validate: (value) ->
+        return value isnt ""
+      instructions: "the value cannot be empty"
+
+    required:
+      validate: (value) ->
+        return value?
+      instructions: "the value is required"
+
+    isNumber:
+      validate: (value) ->
+        # TODO 厳密なチェックではない
+        return not isNaN value
+      instructions: "the value can only be a valid number, e.g. 1, 3.14 or 2010"
+
+    isInteger:
+      validate: (value) ->
+        return false unless value?
+        value += ''
+        return not (value.match /[^0-9]/g) or (parseInt value, 10) + '' isnt value
+      instructions: "the value can only be a integer number, e.g. 0, 1"
+
+    isRangeNumber:
+      validate: (value, args) ->
+        min = args.min
+        max = args.max
+        return false if isNaN value
+        if value < min
+          return false
+        if value > max
+          return false
+        return true
+      instructions: "the value can be more than %min% and less than %max%"
+
+    isRangeMinNumber:
+      validate: (value, args) ->
+        min = args.min
+        return false if isNaN value
+        if value < min
+          return false
+        return true
+      instructions: "the value can be more than %min%"
+
+    isAlphaNum:
+      validate: (value) ->
+        # TODO
+        return not /[^a-z0-9]/i.test value
+      instructions: "the value can only contain characters and numbers, no special symbols"
+
+  constructor: ->
+    @messages = []
+    @config = {}
+
+  hasErrors: ->
+    return @messages.length isnt 0
+
+  getMessages: ->
+    return @messages.slice()
+
+  # data =
+  #   name: '次枠チェック間隔'
+  #   type: isRangeMinNumber
+  #   value: 5
+  #   args: {min: 0, max: 10}
+  #   required: true
+  validate: (data) ->
+    name = data.name
+    type = data.type
+    checker = @checkers[type]
+    value = data.value
+    args = data.args or {}
+    required = if data.required? then !!data.required else false
+    unless checker
+      throw Error "No handler to validate type #{type}"
+    if required
+      unless @checkers.required.validate.call @, value
+        msg = @makeMessage name, @checkers.required.instructions
+        @messages.push = msg
+    unless checker.validate.call @, value, args
+      msg = @makeMessage name, checker.instructions, args
+      @messages.push msg
+    return @hasErrors()
+
+  makeMessage: (name, inst, args) ->
+    for own key, value of args
+      inst = inst.replace (RegExp "%#{key}%", 'g'), value
+    return "Invalid value for *#{name}*, #{inst}"
+
+
+popup.SettingsTab = class SettingsTab extends popup.BaseTab
+  # === Constructor.
   constructor: (tabId, config) ->
     super tabId, config
+    # === Properties.
     @$autoJumpCheckbox = $('#setting-auto-jump')
     @$autoJumpIntervalInput = $('#setting-auto-jump-interval')
     @$autoEnterCheckbox = $('#setting-auto-enter')
@@ -419,50 +568,56 @@ class SettingsTab extends BaseTab
     @$settingOpentabSelect = $('#setting-opentab select')
     @$settingOpentabBlacklist = $('#setting-opentab input:text')
 
-  addEventListeners: ->
+  # === Event listeners.
+  initEventListeners: ->
     $('#settings button[value="ok"]').on 'click', @onClickOkButton
     $('#settings button[value="cancel"]').on 'click', @onClickCancelButton
-    return
-
-  # override
-  _showTab: ->
-    @restoreSettings()
-    return true
-
-  showMessage: (msg, addClass) ->
-    LOGGER.log 'showMessage'
-    $('#settings-status')
-      .css('display', 'inline').addClass(addClass).text msg
-    setTimeout (@hideMessage addClass), 2000
-    addClass = null
-    return
-
-  hideMessage: (removeClass) ->
-    LOGGER.log 'hideMessage'
-    return (removeClass) =>
-      $('#settings-status')
-        .css('display', 'none').removeClass(removeClass).text ''
-      removeClass = null
-      return
+    return @
 
   onClickOkButton: (event) =>
-    # TODO バリデーションは適当で
-    try
-      @validate()
-      # Save.
-      @saveSettings()
-      @config.saveSettings()
-      @showMessage '保存しました', 'success'
-    catch error
+    error = @validate()
+    if error and error.length > 0
       LOGGER.error 'Could not save settings.', error
-      LOGGER.error error.stack if error.stack
-      @restoreSettings()
       @showMessage '不正な値があります', 'failure'
+      return
+    # Save.
+    @saveSettings()
+    @config.save()
+    @showMessage '保存しました', 'success'
     return
 
   onClickCancelButton: (event) =>
     @restoreSettings()
     return
+
+  # === Public methods.
+  # Override.
+  showTab: ->
+    @restoreSettings()
+    return super()
+
+  # === Helper methods.
+  validate: ->
+    validator = new popup.Validator
+    data =
+      name: '次枠チェック間隔'
+      type: 'isRangeMinNumber'
+      value: @$autoJumpIntervalInput.val()
+      args:
+        min: 5
+    if validator.validate data
+      return validator.getMessages()
+    return null
+
+  showMessage: (msg, addClass) ->
+    LOGGER.log 'showMessage'
+    $status = $('#settings-status')
+    $status.css('display', 'inline').addClass(addClass).text msg
+    setTimeout(->
+      $status.css('display', 'none').removeClass(addClass).text ''
+      $status = null
+    , 2000)
+    return @
 
   saveSettings: ->
     # ===== autoJump/autoEnter =====
@@ -498,8 +653,6 @@ class SettingsTab extends BaseTab
     else
       blacklist = []
     @config.setBlackList blacklist
-    checkboxes = null
-    blacklist = null
     return
 
   restoreSettings: ->
@@ -532,15 +685,25 @@ class SettingsTab extends BaseTab
       select.value = value
     blacklist = @config.getBlackList()
     @$settingOpentabBlacklist.val (blacklist.join ',')
-    checkboxes = null
-    blacklist = null
-    return
-
-  validate: ->
-    value = @$autoJumpIntervalInput.val()
-    if not value or value < 5
-      throw new Error 'Validate error.'
     return
 
 
-POPUP = new Popup
+POPUP = null
+$ =>
+  config = chrome.extension.getBackgroundPage().config
+  nicoInfo = chrome.extension.getBackgroundPage().nicoInfo
+  history = chrome.extension.getBackgroundPage().history
+  POPUP = new popup.Popup config, nicoInfo
+  regTab = (tab) ->
+    unless config.isNiconamaEnabled tab.tabId
+      LOGGER.log "Tab #{tab.tabId} is disable."
+      return
+    POPUP.registerTab tab
+    return
+  regTab new popup.OfficialTab 'official', config, nicoInfo
+  regTab new popup.OfficialTab 'favorite', config, nicoInfo
+  regTab new popup.FavoriteTab 'timeshift', config, nicoInfo
+  regTab new popup.HistoryTab 'history', config, history
+  regTab new popup.SettingsTab 'settings', config
+  POPUP.showPopup()
+  return

@@ -1,10 +1,8 @@
-#auto-jump,
-#auto-enter {
+#auto-action {
   width: 100%;
   font-size: 120%;
 }
-#auto-jump a,
-#auto-enter a {
+#auto-action a {
   font-size: 85%;
   cursor: auto;
   vertical-align: middle;
@@ -25,28 +23,29 @@
   box-shadow: inset 0 0 5px 5px #535353;
   border-radius: 4px;
 }
-#auto-jump a:active,
-#auto-enter a:active {
+#auto-action a:active {
   color: #CCC !important;
   background-image: -webkit-gradient(linear, left bottom, left top, color-stop(0, #787878), color-stop(0.5, #5e5e5e), color-stop(0.51, #707070), color-stop(1, #838383));
   background-color: #5f5f5f;
 }
-#auto-jump a span,
-#auto-enter a span {
+#auto-action a span {
   color: #FF9393;
 }
-#auto-jump > div,
-#auto-enter > div {
+#auto-action > div {
   width: 960px;
   margin: auto;
+}
+#auto-action.auto-jump-live,
+#auto-action.auto-jump-gate,
+#auto-action.auto-enter {
   padding-bottom: 2px;
 }
-#auto-jump {
+#auto-action.auto-jump-live {
   background-color: #141414;
   color: #EEEBEB;
 }
-#auto-jump.auto-jump-gate,
-#auto-enter {
+#auto-action.auto-jump-gate,
+#auto-action.auto-enter {
   background-color: white;
   color: black;
 }

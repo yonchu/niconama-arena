@@ -1,83 +1,34 @@
-LOGGER = new Logger
+exports = exports ? window ? @
+common = exports.CHEX.common
 
-# === Common functions ===
+LOGGER = new common.Logger
 
-httpRequest = (url, callback) ->
-  xhr = new XMLHttpRequest
-  xhr.onreadystatechange = ->
-    if xhr.readyState is 4
-      callback xhr.responseText
-    return
-  xhr.open 'GET', url, true
-  xhr.send()
-  return
-
-transIMG = (html) ->
-  return html.replace /<img([^>]+)>/g, '<imgx$1>'
-
-str2date = (year, date, time) ->
-  # TODO 年をまたぐ場合に対応していない
-  sp = date.split '/'
-  mm = parseInt sp[0], 10
-  dd = parseInt sp[1], 10
-
-  sp = time.split ':'
-  hh = parseInt sp[0], 10
-  min = parseInt sp[1], 10
-
-  delta = hh - 24
-  if delta < 0
-    return new Date "#{year}/#{mm}/#{dd} #{hh}:#{min}"
-
-  hh = delta
-  d = new Date "#{year}/#{mm}/#{dd} #{hh}:#{min}"
-  d.setDate d.getDate() + (Math.floor hh / 24 + 1)
-  return d
+# === aujmp ===
+aujmp = exports.namespace 'CHEX.aujmp'
 
 
-# === Class ===
-
-class Base
-  # === Class variables.
-  # http://live.nicovideo.jp/api/getplayerstatus?v=lv
-  @LIVE_CHECK_URL: 'http://watch.live.nicovideo.jp/api/getplayerstatus?v='
-  @LIVE_URL: 'http://live.nicovideo.jp/watch/'
-
-  # === Properties.
-  currentLiveId: null
-  commuId: null
-  commuUrl: null
-  # live or gate
-  pageType: null
-
+aujmp.LivePage = class LivePage
   # === Constructor.
-  constructor: (@config) ->
-    LOGGER.info 'config: ', @config
-    return unless @init()
-    @addEventListeners()
-
-  init: ->
+  constructor: ->
+    # === Properties.
+    # live, gate
+    @pageType = null
     @commuUrl = @getCommuUrl()
     @commuId = @getCommuIdFromUrl @commuUrl
-    @currentLiveId = @getLiveId()
-    unless @currentLiveId
-      throw Error "Not found currentLiveId"
-    LOGGER.info "commuUrl = #{@commuUrl}"
-    LOGGER.info "commuId = #{@commuId}"
-    LOGGER.info "currentLiveId = #{@currentLiveId}"
-    LOGGER.info "pageType = #{@pageType}"
-    return true
+    @isChannel = if @commuId then @commuId.match(/^ch/)? else false
+    @liveId = @getLiveId()
+    @isCrowed = !!location.href.match /\?.*crowded/
 
-  # === Event listeners.
-  addEventListeners: ->
-
-  # === Helper method.
+  # === Method.
   getCommuUrl: ->
     # Get community URL.
     commuUrl = $('.com,.chan')?.find('.smn a').prop 'href'
     if commuUrl
       # Gate page.
-      @pageType = 'gate'
+      if $('#gates').length
+        @pageType = 'gate-valid'
+      else
+        @pageType = 'gate-closed'
     else
       commuUrl = $('#watch_title_box > div > a').prop 'href'
       if commuUrl
@@ -100,16 +51,197 @@ class Base
   getLiveIdFromUrl: (url) ->
     return url.match(/(watch|gate)\/(lv\d+)/)?[2]
 
+  validate: ->
+    msg = []
+    unless @commuUrl
+      msg.push 'Community URL is not exists.'
+    unless @commuId
+      msg.push 'Community ID is not exists.'
+    unless @liveId
+      msg.push 'Live ID is not exists.'
+    unless @pageType
+      msg.push 'Page type is not exists.'
+    if msg.length > 0
+      return msg
+    return
 
-class AutoJump extends Base
+  isPageTypeGate: ->
+    return @pageType is 'gate-valid' or @pageType is 'gate-closed'
+
+  isPageTypeGateValid: ->
+    return @pageType is 'gate-valid'
+
+  isPageTypeGateClosed: ->
+    return @pageType is 'gate-closed'
+
+  isPageTypeLive: ->
+    return @pageType is 'live'
+
+  isJoinCommunity: ->
+    if @isPageTypeLive()
+      return $('span.favorite,span.favorite_ch_link').length is 0
+    else if @isPageTypeGate()
+      return $('.join a').length is 0
+    return false
+
+
+aujmp.AutoAction = class AutoAction
+  @TPL: '<div id="auto-action"><div></div></div>'
+
+  # === Constructor.
+  constructor: (@livePage, @config) ->
+    # === Properties.
+    @$el = null
+    # Initialize.
+    LOGGER.info 'Start auto action'
+    @init()
+
+  # === Initialize.
+  init: ->
+    @render()
+    @$el = $('#auto-action')
+    @autoEnter = new aujmp.AutoEnter @$el, @livePage, @config
+    @autoJump = new aujmp.AutoJump @$el, @livePage, @config
+    @opentabStatus = new aujmp.OpentabStatus @$el, @livePage, @config
+    return @
+
+  render: ->
+    tpl = aujmp.AutoAction.TPL
+    if @livePage.isPageTypeLive()
+      $('#watch_player_top_box').after tpl
+    else if @livePage.isPageTypeGate()
+      $('#bn_gbox').after tpl
+    else
+      throw Error "Unknow page type #{@livePage.pageType}", location.href
+    return @
+
+
+aujmp.AutoJump = class AutoJump
   # === Class variables.
-  @TPL: """
-  <div id="auto-jump">
-    <div>
-      <input type="checkbox" name="auto-jump" /> 自動枠移動
-    </div>
-  </div>
-  """
+  # http://live.nicovideo.jp/api/getplayerstatus?v=lv
+  @LIVE_CHECK_URL: 'http://watch.live.nicovideo.jp/api/getplayerstatus?v='
+
+  @TPL: '<input type="checkbox" name="auto-jump" /> 自動枠移動'
+
+  # === Constructor.
+  constructor: (@$el, @livePage, @config) ->
+    # === Properties.
+    @$checkbox = null
+    @isCurrentLiveClosed = false
+    @checkTimer = null
+
+    # Initialize.
+    LOGGER.info 'Start auto jump'
+    error = @validate()
+    if error
+      LOGGER.info "Cancel auto jump: ", error
+    else
+      @init()
+      @initEventListeners()
+
+  # === Initialize.
+  validate: ->
+    if @livePage.isPageTypeGateValid()
+      return "Invalid page type: #{@livePage.pageType}"
+    if @livePage.isChannel
+      return "Skip channel page: #{@livePage.commuId}"
+    return @livePage.validate()
+
+  init: ->
+    @render()
+    @$checkbox = @$el.find('input:checkbox')
+
+    # Check next on-air.
+    if @config.enableAutoJump
+      @$checkbox.attr 'checked', true
+      @checkNextOnair()
+      @setUpCheckTimer()
+    return @
+
+  # === Event listeners.
+  initEventListeners: ->
+    @$checkbox.on 'change', @onChangeCheckBox
+    return @
+
+  onChangeCheckBox: =>
+    @clearCheckTimer()
+    if @$checkbox.attr 'checked'
+      @setUpCheckTimer()
+    return
+
+  # === Methods.
+  setUpCheckTimer: ->
+    time = @config.autoJumpIntervalSec * 1000
+    @checkTimer = setInterval @checkNextOnair, time
+    return @
+
+  clearCheckTimer: ->
+    if @checkTimer
+      clearInterval @checkTimer
+      @checkTimer = null
+    return @
+
+  render: ->
+    # Add css class.
+    if @livePage.isPageTypeLive()
+      @$el.addClass 'auto-jump-live'
+    else if @livePage.isPageTypeGate()
+      @$el.addClass 'auto-jump-gate'
+    else
+      LOGGER.error "Unknown page type #{@livePage.pageType}"
+      return @
+    @$el.find('div').append aujmp.AutoJump.TPL
+    return @
+
+  checkNextOnair: =>
+    if @isCurrentLiveClosed
+      @jumpNextOnair()
+      return
+
+    url = aujmp.AutoJump.LIVE_CHECK_URL + @livePage.liveId
+    LOGGER.info "HTTP Request(checkNextOnair): #{url}"
+
+    common.httpRequest url, (response) =>
+      $res = $($.parseHTML (common.transIMG response))
+      errorcode = $res.find('error code').text()
+      LOGGER.info "errorcode = #{errorcode}"
+      # full/commingsoon/closed/notfound/timeshift_ticket_exhaust
+      if errorcode is 'closed'
+        # Off-air
+        @isCurrentLiveClosed = true
+        @jumpNextOnair()
+      else if errorcode in ['notfound', 'timeshift_ticket_exhaust']
+        @clearCheckTimer()
+        @$checkbox.attr 'checked', false
+      return
+    return
+
+  jumpNextOnair: ->
+    url = @livePage.commuUrl
+    LOGGER.info "HTTP Request(jumpNextOnair): #{url}"
+    common.httpRequest url, (response) =>
+      $res = $($.parseHTML (common.transIMG response))
+
+      nowLiveUrl = $res.find('#now_live a').first().attr 'href'
+      unless nowLiveUrl
+        # Off-air
+        LOGGER.info 'Off-air'
+        return @
+
+      # On-air
+      LOGGER.info "On-air: nowLiveUrl = #{nowLiveUrl}"
+      nowLiveId = nowLiveUrl.match(/watch\/(lv\d+)/)[1]
+      LOGGER.info "nowLiveId = #{nowLiveId}"
+      if nowLiveId isnt @livePage.liveId
+          # Move to new live page.
+          location.replace nowLiveUrl
+      return @
+    return @
+
+
+aujmp.OpentabStatus = class OpentabStatus
+  @TPL: '<a href="javascript:void(0)">自動タブOPEN' \
+    + ' (%commuId%): &nbsp;<span>???</span></a>'
 
   @OPENTAB_STATUS:
     'disable':
@@ -125,219 +257,202 @@ class AutoJump extends Base
       msg: '有効'
       next: 'disable'
 
-  # === Properties.
-  $el: null
-  $checkbox: null
-  $toggleButton: null
-  isCurrentLiveClosed: false
-  checkTimer: null
+  # === Constructor.
+  constructor: (@$el, @livePage, @config) ->
+    # === Properties.
+    @$toggleButton = null
+
+    # Initialize.
+    LOGGER.info 'Start opentab status'
+    error = @validate()
+    if error
+      LOGGER.info "Cancel opentab status: ", error
+    else
+      @init()
 
   # === Initialize.
+  validate: ->
+    error = @livePage.validate()
+    if error
+      return error
+    unless @livePage.isJoinCommunity()
+      return 'Not joining this community.'
+    LOGGER.info "Joining this community #{@livePage.liveId}"
+    return
+
   init: ->
-    LOGGER.info 'Start auto jump.'
-    super()
-    unless @commuUrl and @commuId and @currentLiveId and @pageType
-      LOGGER.info "Not run in this page."
-      return false
     @render()
-    @$el = $('#auto-jump')
-    @$checkbox = @$el.find('input:checkbox')
+    return @
 
-    # Set opentab status.
-    if @isJoinCommunity()
-      LOGGER.info 'Joining this community.'
-      @renderOpentabStatus()
-
-    # Check next on-air.
-    if @config.enableAutoJump
-      @$checkbox.attr 'checked', true
-      @checkNextOnair()
-      @checkTimer = setInterval @checkNextOnair, @config.autoJumpIntervalSec * 1000
-    return true
-
+  # === Methods.
   render: ->
-    tpl = AutoJump.TPL.replace '%commuId%', @commuId
-    # Insert checkbox element.
-    if @pageType is 'live'
-      $('#watch_player_top_box').after tpl
-    else if @pageType is 'gate'
-      # Change css.
-      $('#bn_gbox').after tpl
-      $autoJumpDiv = $('#auto-jump').addClass 'auto-jump-gate'
+    # TODO 別クラスを用意したいところ
+    if @livePage.isPageTypeLive()
+      @$el.addClass 'auto-jump-live'
+    else if @livePage.isPageTypeGate()
+      @$el.addClass 'auto-jump-gate'
     else
-      throw Error "Unknow page type #{@pageType}", location.href
+      LOGGER.error "Unknown page type #{@livePage.pageType}"
+      return @
+    html = aujmp.OpentabStatus.TPL.replace '%commuId%', @livePage.commuId
+    @$el.find('div').append html
+    @$toggleButton = @$el.find 'a'
+    @getOpentabStatus()
+    return @
 
-  # === Event listeners.
-  addEventListeners: ->
-    @$checkbox.on 'change', @onChangeCheckBox
+  getOpentabStatus: ->
+    chrome.runtime.sendMessage({
+        'target' : 'config',
+        'action' : 'getOpentabStatus',
+        'args'   : [@livePage.commuId]
+      }, (response) =>
+        status = response.res
+        @showOpentabStatus status
+        @$toggleButton.on 'click', @onToggleButton
+        return
+    )
     return
 
-  onChangeCheckBox: =>
-    if @checkTimer
-      clearInterval @checkTimer
-      @checkTimer = null
-    if @$checkbox.attr 'checked'
-      @checkTimer = setInterval @checkNextOnair, @config.autoJumpIntervalSec * 1000
-    return
+  showOpentabStatus: (status) ->
+    LOGGER.log "Show opentab status: #{status}"
+    map = aujmp.OpentabStatus.OPENTAB_STATUS
+    msg = map[status].msg
+    className = map[status].className
+    @$toggleButton.find('span').html msg
+    @$toggleButton.attr 'class', className
+    return @
 
   onToggleButton: (event) =>
+    event.preventDefault()
     className = @$toggleButton.attr 'class'
-    map = AutoJump.OPENTAB_STATUS
+    map = aujmp.OpentabStatus.OPENTAB_STATUS
     for own key, value of map
       if value.className is className
         @saveOpentabStatus value.next
         @showOpentabStatus value.next
         break
-
-  # === Auto jump functions.
-  checkNextOnair: =>
-    if @isCurrentLiveClosed
-      @jumpNextOnair()
-      return
-
-    LOGGER.info "HTTP Request(checkNextOnair): #{AutoJump.LIVE_CHECK_URL + @currentLiveId}"
-
-    httpRequest AutoJump.LIVE_CHECK_URL + @currentLiveId, (response) =>
-      $res = $($.parseHTML (transIMG response))
-      errorcode = $res.find('error code').text()
-      LOGGER.info "errorcode = #{errorcode}"
-      # full/commingsoon/closed/notfound/timeshift_ticket_exhaust
-      if errorcode is 'closed'
-        # Off-air
-        @isCurrentLiveClosed = true
-        @jumpNextOnair()
-      else if errorcode in ['notfound', 'timeshift_ticket_exhaust']
-        if @checkTimer
-          clearInterval @checkTimer
-          @checkTimer = null
-        @$checkbox.attr 'checked', false
-      return
-    return
-
-  jumpNextOnair: ->
-    LOGGER.info "HTTP Request(jumpNextOnair): #{@commuUrl}"
-    httpRequest @commuUrl, (response) =>
-      $res = $($.parseHTML (transIMG response))
-
-      nowLiveUrl = $res.find('#now_live a').first().attr 'href'
-      unless nowLiveUrl
-        # Off-air
-        LOGGER.info 'Off-air'
-        return
-
-      # On-air
-      LOGGER.info "On-air: nowLiveUrl = #{nowLiveUrl}"
-      nowLiveId = nowLiveUrl.match(/watch\/(lv\d+)/)[1]
-      LOGGER.info "nowLiveId = #{nowLiveId}"
-      if nowLiveId isnt @currentLiveId
-          # Move to new live page.
-          location.replace nowLiveUrl
-      return
-    return
-
-  # === Opentab functions.
-  isJoinCommunity: ->
-    if @pageType is 'live'
-      return $('span.favorite,span.favorite_ch_link').length is 0
-    else if @pageType is 'gate'
-      return $('.join a').length is 0
-    return false
-
-  renderOpentabStatus: ->
-    html = '<a href="javascript:void(0)">自動タブOPEN ('
-    html += @commuId
-    html += '): &nbsp;<span>???</span></a>'
-    @$el.find('div').append html
-    @$toggleButton = @$el.find 'a'
-    @$toggleButton.on 'click', @onToggleButton
-    chrome.runtime.sendMessage({
-        'target' : 'config',
-        'action' : 'getOpentabStatus',
-        'args'   : [@commuId]
-      }, (response) =>
-        status = response.res
-        @showOpentabStatus status
-        return
-    )
     return
 
   saveOpentabStatus: (status) ->
     chrome.runtime.sendMessage({
         'target' : 'config',
         'action' : 'setOpentabStatus',
-        'args'   : [@commuId, status]
+        'args'   : [@livePage.commuId, status]
       }, (response) =>
+        LOGGER.log 'Saved opentab status', response
         return
     )
-    return
-
-  showOpentabStatus: (status) ->
-    LOGGER.log "Show openttab status: #{status}"
-    map = AutoJump.OPENTAB_STATUS
-    msg = map[status].msg
-    className = map[status].className
-    @$toggleButton.attr 'class', className
-    @$toggleButton.find('span').html msg
-    return
+    return @
 
 
-class AutoEnter extends Base
+aujmp.AutoEnter = class AutoEnter
   # === Class variables.
-  @CHECKBOX: """
-  <div id="auto-enter">
-    <div>
-      <input type="checkbox" name="auto-enter" /> 自動入場
-    </div>
-  </div>
-  """
+  @TPL: '<input type="checkbox" name="auto-enter" /> 自動入場'
 
-  # === Properties.
-  $checkbox: null
+  # === Constructor.
+  constructor: (@$el, @livePage, @config) ->
+    # === Properties.
+    @$checkbox = null
+
+    # Initialize.
+    LOGGER.info 'Start auto enter'
+    error = @validate()
+    if error
+      LOGGER.info "Cancel auto enter: ", error
+    else
+      @init()
+      @initEventListeners()
+
+  # === Initialize.
+  validate: ->
+    unless @livePage.isPageTypeGateValid()
+      return "Invalid page type. #{@livePage.pageType}"
+    unless @livePage.liveId
+      return 'Live ID is not found.'
+    return
 
   init: ->
-    LOGGER.info 'Start auto enter.'
-    super()
-    $('#bn_gbox').after AutoEnter.CHECKBOX
-    @$checkbox = $('#auto-enter input:checkbox')
+    @render()
+    return @
+
+  render: ->
+    @$el.addClass 'auto-enter'
+    @$el.find('div').append aujmp.AutoEnter.TPL
+    @$checkbox = @$el.find('input:checkbox')
     if @config.enableAutoEnter
       @$checkbox.attr 'checked', true
-    return true
+    return @
 
-  addEventListeners: ->
+  # === Event listeners.
+  initEventListeners: ->
     $('#gates').on 'DOMSubtreeModified', @onDOMSubtreeModifiedGates
-    return
+    return @
 
   onDOMSubtreeModifiedGates: =>
     LOGGER.info "Run auto enter: #{new Date()}"
     if @$checkbox.attr 'checked'
-      # httpRequest @liveCheckUrl + @currentLiveId, (response) =>
-      #   # location.reload true
-      #   LOGGER.info 'Request for live check is succescc'
-      location.reload true
+      if @livePage.isCrowed
+        LOGGER.warn 'Cancel auto enter because this live is crowed.'
+      else
+        # url = @liveCheckUrl + @livePage.liveId
+        # common.httpRequest url, (response) =>
+        #   # location.reload true
+        #   LOGGER.info 'Request for live check is succescc'
+        location.reload true
     return
 
 
-class History extends Base
-  init: ->
-    LOGGER.info 'Start history.'
-    super()
-    if $('#gates').length or $('#bn_gbox .kaijo').length
-      data = @getLiveDataForGate()
-    else
-      data = @getLiveDataForWatch()
-    data.accessTime = (new Date).getTime()
-    unless @validate data
-      LOGGER.error "Validate error", data
-      return false
-    @saveHistory data
-    return true
+aujmp.History = class History
+  # === Class variables.
+  @LIVE_URL: 'http://live.nicovideo.jp/watch/'
 
-  getLiveDataForGate: ->
-    LOGGER.info "Saving history in gate page: #{@currentLiveId}"
-    data = {}
-    data.id = @currentLiveId
-    data.title = $('.infobox h2 > span:first').text().trim()
-    data.link = Base.LIVE_URL + data.id
+  # === Constructor.
+  constructor: (@livePage, @config) ->
+    # === Properties.
+    id = @livePage.liveId
+    @liveData =
+      id: id
+      title: null
+      link: aujmp.History.LIVE_URL + id
+      thumnail: null
+      openTime: null
+      startTime: null
+      endTimd: null
+      accessTime: Date.now()
+
+    # Initialize.
+    LOGGER.info 'Start history'
+    error = @validate()
+    if error
+      LOGGER.info "Cancel history: ", error
+    else
+      @init()
+
+  # === Initialize.
+  validate: ->
+    unless @livePage.liveId
+      return 'Live ID is not found.'
+    return
+
+  init: ->
+    if @livePage.isPageTypeGate()
+      @setLiveDataForGate()
+    else if @livePage.isPageTypeLive()
+      @setLiveDataForLive()
+    else
+      throw Error "Unknow page type #{@livePage.pageType}"
+
+    error = @validateData()
+    if error
+      LOGGER.error "Data validation error", error, @liveData
+      return @
+    @saveHistory @liveData
+    return @
+
+  setLiveDataForGate: ->
+    LOGGER.info "Saving history in gate page: #{@liveData.id}"
+    @liveData.title = $('.infobox h2 > span:first').text().trim()
+    @liveData.thumnail = $('#bn_gbox > .bn > meta').attr 'content'
     time = $('#bn_gbox .kaijo').text().trim()
     timeMatch = time.match /(\d\d\d\d)\/(\d\d\/\d\d).*開場:(\d\d:\d\d).*開演:(\d\d:\d\d)/
     if timeMatch
@@ -345,25 +460,21 @@ class History extends Base
       dateStr = timeMatch[2]
       openTimeStr = timeMatch[3]
       startTimeStr = timeMatch[4]
-      data.openTime = str2date yearStr, dateStr, openTimeStr
-      data.startTime = str2date yearStr, dateStr, startTimeStr
-    data.thumnail = $('#bn_gbox > .bn > meta').attr 'content'
+      @liveData.openTime = common.str2date yearStr, dateStr, openTimeStr
+      @liveData.startTime = common.str2date yearStr, dateStr, startTimeStr
     endTimeMatch = $('#bn_gbox .kaijo').next().text()
       .match /この番組は(\d\d\d\d)\/(\d\d\/\d\d).*(\d\d:\d\d)/
     if endTimeMatch
       endYearStr = endTimeMatch[1]
       endDateStr = endTimeMatch[2]
       endTimeStr = endTimeMatch[3]
-      data.endTime = str2date endYearStr, endDateStr, endTimeStr
-    return data
+      @liveData.endTime = common.str2date endYearStr, endDateStr, endTimeStr
+    return @
 
-  getLiveDataForWatch: ->
-    LOGGER.info "Saving history in live page: #{@currentLiveId}"
-    data = {}
-    data.id = @currentLiveId
-    data.link = Base.LIVE_URL + data.id
-    data.title = $('#watch_title_box .box_inner .title').attr('title').trim()
-    data.thumnail = $('#watch_title_box .box_inner img:first').attr 'src'
+  setLiveDataForLive: ->
+    LOGGER.info "Saving history in live page: #{@liveData.id}"
+    @liveData.title = $('#watch_title_box .box_inner .title').attr('title').trim()
+    @liveData.thumnail = $('#watch_title_box .box_inner img:first').attr 'src'
     time = $('#watch_tab_box .information').first().text().trim().replace(/：/g, ':')
     timeMatch = time.match /(\d\d\d\d)\/(\d\d\/\d\d).*(\d\d:\d\d).*開場.*(\d\d:\d\d)開演/
     if timeMatch
@@ -371,41 +482,38 @@ class History extends Base
       dateStr = timeMatch[2]
       openTimeStr = timeMatch[3]
       startTimeStr = timeMatch[4]
-      data.openTime = str2date(yearStr, dateStr, openTimeStr).getTime()
-      data.startTime = str2date(yearStr, dateStr, startTimeStr).getTime()
-    return data
+      @liveData.openTime = common.str2date(yearStr, dateStr, openTimeStr).getTime()
+      @liveData.startTime = common.str2date(yearStr, dateStr, startTimeStr).getTime()
+    return @
 
-  validate: (data) ->
-    unless data
-      LOGGER.error "data is null #{@currentLiveId}"
-      return false
-    unless data.title
-      LOGGER.error "Title does not exist #{@currentLiveId}"
-      return false
-    unless data.link
-      LOGGER.error "Link does not exist #{@currentLiveId}"
-      return false
-    unless data.thumnail
-      LOGGER.error "Thumnail does not exist #{@currentLiveId}"
-      return false
-    return true
+  validateData: ->
+    msg = []
+    unless @liveData.title
+      msg.push "Title does not exist."
+    unless @liveData.link
+      msg.push "Link does not exist."
+    unless @liveData.thumnail
+      msg.push "Thumnail does not exist."
+    if msg.length > 0
+      return msg
+    return
 
-  saveHistory: (data) ->
-    LOGGER.info "Save history", data
+  saveHistory: ->
+    LOGGER.info "Save history", @liveData
     chrome.runtime.sendMessage({
         'target' : 'history',
         'action' : 'saveHistory',
-        'args'   : [data]
+        'args'   : [@liveData]
       }, (response) =>
         res = response.res
         LOGGER.info "Saved history", res
         return
     )
-    return
+    return @
 
 
 # === Initialize ===
-preInit = ->
+init = ->
   if $('#zero_lead').length
     LOGGER.info 'No avairable nico_arena on Harajuku.'
     return
@@ -413,34 +521,38 @@ preInit = ->
   # encodeURI(decodeURI(location.href))
   if location.href.match /http[s]?:\/\/live\.nicovideo\.jp\/gate\/.*/
     LOGGER.info 'This page is for the gate.'
-    watchUrl = location.href.replace /\/gate\//, '/watch/'
-    location.replace watchUrl
+    if location.href.match /\?.*crowded/
+      LOGGER.info 'This page is now crowed.'
+    else
+      watchUrl = location.href.replace /\/gate\//, '/watch/'
+      # location.replace watchUrl
+      return
+
+  run = (config) ->
+    # Analyize this page.
+    livePage = new aujmp.LivePage
+    LOGGER.info 'Live page info = ', livePage
+    # History.
+    if config.enableHistory
+      HISTORY = new aujmp.History livePage, config
+    # Auto action.
+    AUTO_ACTION = new aujmp.AutoAction livePage, config
     return
 
   chrome.runtime.sendMessage({
       'target' : 'config',
       'action' : 'getConfigForAutoJump',
       'args'   : []
-    }, (response) =>
+    }, (response) ->
       config = response.res
-      # Initialize
-      init config
+      LOGGER.info 'Config = ', config
+      run config
       return
   )
   return
 
 
-autoJump = null
-autoEnter = null
-history = null
-init = (config) ->
-  if config.enableHistory
-    history = new History config
-  if $('#gates').length
-    autoEnter = new AutoEnter config
-  else
-    autoJump = new AutoJump config
-
-
 # Main
-preInit()
+AUTO_ACTION = null
+HISTORY = null
+init()

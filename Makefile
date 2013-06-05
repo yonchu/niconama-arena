@@ -3,16 +3,16 @@
 FAB=fab
 
 build:
-	@$(FAB) build
+	$(FAB) build
 
 release:
-	@$(FAB) release
+	$(FAB) release
 
 install:
-	@$(FAB) install
+	$(FAB) install
 
 clean:
-	@$(FAB) clean
+	$(FAB) clean
 
 clean-all:
-	@$(FAB) clean_all
+	$(FAB) clean_all

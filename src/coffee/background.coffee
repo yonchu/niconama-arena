@@ -1,60 +1,64 @@
-LOGGER = new Logger
+exports = exports ? window ? @
+common = exports.CHEX.common
 
-getLiveIdFromUrl = (url) ->
-  url.match(/(watch|gate)\/(lv\d+)/)?[2]
+LOGGER = new common.Logger common.Logger.LEVEL.WARN
 
-
-changeGate2Watch = (url) ->
-  return url.replace(/\?.*/, '').replace /\/gate\//, '/watch/'
-
-
-str2date = (year, date, time) ->
-  # TODO 年をまたぐ場合に対応していない
-  sp = date.split '/'
-  mm = parseInt sp[0], 10
-  dd = parseInt sp[1], 10
-
-  sp = time.split ':'
-  hh = parseInt sp[0], 10
-  min = parseInt sp[1], 10
-
-  delta = hh - 24
-  if delta < 0
-    return new Date "#{year}/#{mm}/#{dd} #{hh}:#{min}"
-
-  hh = delta
-  d = new Date "#{year}/#{mm}/#{dd} #{hh}:#{min}"
-  d.setDate d.getDate() + (Math.floor hh / 24 + 1)
-  return d
+# === bg ===
+bg = exports.namespace 'CHEX.bg'
 
 
-class Background
-  # TODO Commandsは別クラス referto Vimmers
-  commands:
-    'config': null
+bg.Background = class Background
+  # === Constructor.
+  constructor: (@commands) ->
+    LOGGER.log "[Background] Initializing...", @commands
+    @initEventListeners()
 
-  constructor: (@config, @history)->
-    @commands.config = @config
-    @commands.history = @history
-    @addEventListeners()
-
-  addEventListeners: ->
+  # === Event Listeners.
+  initEventListeners: ->
     chrome.runtime.onMessage.addListener (request, sender, sendResponse) =>
-      if sender.tab
-        LOGGER.log "from a content script: #{sender.tab.url}"
-      else
-        LOGGER.log "from the extension"
       target = @commands[request.target]
+      if sender.tab
+        logmsg = "[Background] Received message from a content script: #{sender.tab.url}"
+      else
+        logmsg = "[Background] Received message  from the extension"
+      LOGGER.log logmsg, request, target
       unless target
-        throw new Error "Invalid target #{request.target}"
-      res = target[request.action].apply target, request.args
-      sendResponse res: res
-      target = null
+        throw Error "Invalid target #{request.target}", @commands
+      args = request.args
+      args.push sendResponse
+      res = target[request.action].apply target, args
+      if res?
+        sendResponse res: res
       return true
     return
 
 
-class Config
+bg.ConfigCommands = class ConfigCommands
+  # === Constructor.
+  constructor: (@config) ->
+
+  # === Public methods.
+  getOpentabStatus: (commuId) ->
+    return @config.getOpentabStatus commuId
+
+  setOpentabStatus: (commuId, status) ->
+    @config.setOpentabStatus commuId, status
+    return true
+
+  getConfigForAutoJump: ->
+    return @config.getConfigForAutoJump()
+
+
+bg.HistoryCommands = class HistoryCommands
+  # === Constructor.
+  constructor: (@history) ->
+
+  # === Public methods.
+  saveHistory: (data) ->
+    return @history.saveHistory data
+
+
+bg.Config = class Config
   @BADGE_ENABLE_VALUES: ['disable', 'before', 'gate', 'onair']
 
   @DEFAULT_SETTINGS:
@@ -102,87 +106,86 @@ class Config
       blacklist: []
       whitelist: []
 
-  opentabStatus: {}
 
+  # === Constructor.
   constructor: ->
-    @initSettings()
-    @setSaveTabNum 0 unless @_getValue('saveTabNum')?
-    @enableFetchDetail = false
+    @opentabStatus = {}
+    @_initSettings()
 
-  # ===== localStorage functions =====
+  # ===== localStorage methods =====
   _getValue: (key, def=undefined) ->
     value = localStorage[key]
     console.assert value isnt 'undefined',
-      "Error: Unexpected value in localStorage (key=#{key}})"
+      "[Config] Error: Unexpected value in localStorage (key=#{key}})"
     return if value? then value else def
 
   _setValue: (key, value) ->
     console.assert value isnt 'undefined',
-      "Error: Unexpected value in localStorage (key=#{key}})"
+      "[Config] Error: Unexpected value in localStorage (key=#{key}})"
     if value
       localStorage[key] = value
     else
       localStorage.removeItem(key)
     return
 
-  # ===== Settings functions =====
-  initSettings: ->
+  # ===== Settings methods =====
+  _initSettings: ->
     settings = localStorage.settings
     if settings
       @settings = JSON.parse settings
     else
-      @settings = Config.DEFAULT_SETTINGS
-      @saveSettings()
-      LOGGER.info 'Save default confing'
-    return settings
+      @settings = bg.Config.DEFAULT_SETTINGS
+      @save()
+      LOGGER.info '[Config] Save default settings.'
+    return
 
-  saveSettings: ->
+  save: ->
     settings = JSON.stringify @settings
     localStorage.settings = settings
+    LOGGER.log "[Config] Saved settings: ", settings
     return
 
   _getSettingsValue: (key, def=undefined) ->
+    unless @settings.hasOwnProperty key
+      throw Error "Invalid key #{key}"
     value = @settings[key]
     console.assert value isnt 'undefined',
-      "Error: Unexpected value in settings (key=#{key}})"
+      "[Config] Error: Unexpected value in settings (key=#{key}})"
     return if value? then value else def
 
   _setSettingsValue: (key, value) ->
     console.assert value isnt 'undefined',
-      "Error: Unexpected value in localStorage (key=#{key}})"
+      "[Config] Error: Unexpected value in localStorage (key=#{key}})"
     unless value?
-      throw new Error "Error: invalid value #{value}"
+      throw Error "invalid value #{value}"
     unless @settings[key]?
-      throw new Error "Error: invalid key #{key}"
+      throw Error "invalid key #{key}"
     @settings[key] = value
     return
 
   _getSettingsFlag: (key) ->
     value = @_getSettingsValue key
-    return if value then true else false
+    return !!value
 
   _setSettingsFlag: (key, value) ->
-    value = if value then true else false
-    @_setSettingsValue key, value
+    @_setSettingsValue key, !!value
     return
 
-  # ===== Common functions =====
+  # ===== Common methods =====
+  # TODO
   _isInt: (value) ->
-    unless value?
-      return false
+    return false unless value?
     value += ''
     if (value.match /[^0-9]/g) or (parseInt value, 10) + '' isnt value
       return false
     return true
 
-  # ===== tabNum =====
-  getSaveTabNum: ->
-    return @_getValue 'saveTabNum', 0
+  # ===== saveTabId =====
+  getSaveTabId: ->
+    return @_getValue 'saveTabId'
 
-  setSaveTabNum: (value) ->
-    unless @_isInt value
-      throw new Error "Error: invalid value #{value}"
-    @_setValue 'saveTabNum', value
+  setSaveTabId: (value) ->
+    @_setValue 'saveTabId', value
     return
 
   # ===== enabledNiconama =====
@@ -190,17 +193,10 @@ class Config
     return @_getSettingsValue 'enabledNiconama'
 
   isNiconamaEnabled: (key) ->
-    settings = @getEnabledNiconamaSettings()
-    unless settings[key]?
-      throw new Error "Error: invalid key #{key}"
-    return settings[key]
+    return @getEnabledNiconamaSettings()[key]
 
   setEnabledNiconamaSettings: (key, value) ->
-    settings = @getEnabledNiconamaSettings()
-    unless settings[key]?
-      throw new Error "Error: invalid key #{key}"
-    value = if value then true else false
-    settings[key] = value
+    @getEnabledNiconamaSettings()[key] = !!value
     return
 
   # ===== niconamaUpdateIntervalSec =====
@@ -209,7 +205,7 @@ class Config
 
   setNiconamaUpdateIntervalSec: (value) ->
     unless @_isInt value
-      throw new Error "Error: invalid value #{value}"
+      throw Error "Invalid value #{value}"
     @_setSettingsValue 'niconamaUpdateIntervalSec', value
     return
 
@@ -218,18 +214,12 @@ class Config
     return @_getSettingsValue 'badge'
 
   getBadgeEnable: (key) ->
-    settings = @getBadgeSettings()
-    unless settings[key]?
-      throw new Error "Error: invalid key #{key}"
-    return settings[key].enable
+    return @getBadgeSettings()[key].enable
 
   setBadgeEnable: (key, value) ->
-    if not value or not value in Config.BADGE_ENABLE_VALUES
-      throw new Error "Error: invalid value #{value}"
-    settings = @getBadgeSettings()
-    unless settings[key]?
-      throw new Error "Error: invalid key #{key}"
-    settings[key].enable = value
+    if not value or not value in bg.Config.BADGE_ENABLE_VALUES
+      throw Error "Invalid value #{value}"
+    @getBadgeSettings()[key].enable = value
     return
 
   isBeforeBadgeEnabled: (key) ->
@@ -242,18 +232,12 @@ class Config
     return (@getBadgeEnable key) is 'onair'
 
   getBadgeBeforeTimeSec: (key) ->
-    settings = @getBadgeSettings()
-    unless settings[key]?
-      throw new Error "Error: invalid key #{key}"
-    return settings[key].beforeTimeSec
+    return @getBadgeSettings()[key].beforeTimeSec
 
   setBadgeBeforeTimeSec: (key, value) ->
     unless @_isInt value
-      throw new Error "Error: invalid value #{value}"
-    settings = @getBadgeSettings()
-    unless settings[key]?
-      throw new Error "Error: invalid key #{key}"
-    settings[key].beforeTimeSec = value
+      throw Error "Invalid value #{value}"
+    @getBadgeSettings()[key].beforeTimeSec = value
     return
 
   # ===== notification =====
@@ -261,18 +245,12 @@ class Config
     return @_getSettingsValue 'notification'
 
   getNotificationEnable: (key) ->
-    settings = @getNotificationSettings()
-    unless settings[key]?
-      throw new Error "Error: invalid key #{key}"
-    return settings[key].enable
+    return @getNotificationSettings()[key].enable
 
   setNotificationEnable: (key, value) ->
-    if not value or not value in Config.BADGE_ENABLE_VALUES
-      throw new Error "Error: invalid value #{value}"
-    settings = @getNotificationSettings()
-    unless settings[key]?
-      throw new Error "Error: invalid key #{key}"
-    settings[key].enable = value
+    if not value or not value in bg.Config.BADGE_ENABLE_VALUES
+      throw Error "Invalid value #{value}"
+    @getNotificationSettings()[key].enable = value
     return
 
   isBeforeNotificationEnabled: (key) ->
@@ -285,28 +263,19 @@ class Config
     return (@getNotificationEnable key) is 'onair'
 
   getNotificationBeforeTimeSec: (key) ->
-    settings = @getNotificationSettings()
-    unless settings[key]?
-      throw new Error "Error: invalid key #{key}"
-    return settings[key].beforeTimeSec
+    return @getNotificationSettings()[key].beforeTimeSec
 
   # ===== opentab =====
   getOpentabSettings: ->
     return @_getSettingsValue 'opentab'
 
   getOpentabEnable: (key) ->
-    settings = @getOpentabSettings()
-    unless settings[key]?
-      throw new Error "Error: invalid key #{key}"
-    return settings[key].enable
+    return @getOpentabSettings()[key].enable
 
   setOpentabEnable: (key, value) ->
-    if not value or not value in Config.BADGE_ENABLE_VALUES
-      throw new Error "Error: invalid value #{value}"
-    settings = @getOpentabSettings()
-    unless settings[key]?
-      throw new Error "Error: invalid key #{key}"
-    settings[key].enable = value
+    if not value or not value in bg.Config.BADGE_ENABLE_VALUES
+      throw Error "Invalid value #{value}"
+    @getOpentabSettings()[key].enable = value
     return
 
   isBeforeOpentabEnabled: (key) ->
@@ -319,44 +288,31 @@ class Config
     return (@getOpentabEnable key) is 'onair'
 
   getOpentabBeforeTimeSec: (key) ->
-    settings = @getOpentabSettings()
-    unless settings[key]?
-      throw new Error "Error: invalid key #{key}"
-    return settings[key].beforeTimeSec
+    return @getOpentabSettings()[key].beforeTimeSec
 
   isRuleBlackList: ->
-    settings = @getOpentabSettings()
-    rule = settings['rule']
-    return true if not rule or rule is 'blacklist'
-    return false
+    rule = @getOpentabSettings()['rule']
+    return not rule or rule is 'blacklist'
 
   getBlackList: ->
-    settings = @getOpentabSettings()
-    list = settings['blacklist']
-    return [] unless list
-    return list
+    return @getOpentabSettings()['blacklist'] or []
 
   setBlackList: (list) ->
     if ($.type list) isnt 'array'
-      throw new Error "Invalid list #{list}"
-    settings = @getOpentabSettings()
-    settings['blacklist'] = list
+      throw Error "Invalid list #{list}"
+    @getOpentabSettings()['blacklist'] = list
     return
 
   isOpentabEnable: (commuId) ->
-    st = @getOpentabStatus commuId
-    return st is 'enable'
+    return (@getOpentabStatus commuId) is 'enable'
 
   getOpentabStatus: (commuId) ->
-    list = @getBlackList()
-    if commuId in list
+    if commuId in @getBlackList()
       return 'disable'
-    st = @opentabStatus[commuId]
-    unless st
-      return 'enable'
+    st = @opentabStatus[commuId] or 'enable'
     if st is 'disable'
       delete @opentabStatus[commuId]
-      return 'enable'
+      st = 'enable'
     return st
 
   setOpentabStatus: (commuId, status) ->
@@ -366,21 +322,19 @@ class Config
       save = @addOpentabBlackList commuId
     else
       save = @removeOpentabBlackList commuId
-    @saveSettings() if save
+    @save() if save
     return
 
   addOpentabBlackList: (commuId) ->
     list = @getBlackList()
-    if commuId in list
-      return false
+    return false if commuId in list
     list.push commuId
     return true
 
   removeOpentabBlackList: (commuId) ->
     list = @getBlackList()
     idx = list.indexOf commuId
-    if idx < 0
-      return false
+    return false if idx < 0
     list.splice idx, 1
     return true
 
@@ -397,8 +351,8 @@ class Config
 
   setAutoJumpIntervalSec: (value) ->
     unless @_isInt value
-      throw new Error "Error: invalid value #{value}"
-    value = parseInt value
+      throw Error "Invalid value #{value}"
+    value = parseInt value, 10
     @_setSettingsValue 'autoJumpIntervalSec', value
     return
 
@@ -412,30 +366,26 @@ class Config
 
   # ===== Auto jump config =====
   getConfigForAutoJump: ->
-    conf = {}
-    conf.enableAutoJump = @getEnableAutoJump()
-    conf.autoJumpIntervalSec = @getAutoJumpIntervalSec()
-    conf.enableAutoEnter = @getEnableAutoEnter()
-    conf.enableHistory = @isNiconamaEnabled 'history'
-    LOGGER.info "getConfigForAutoJump", conf
+    conf =
+      enableAutoJump: @getEnableAutoJump()
+      autoJumpIntervalSec: @getAutoJumpIntervalSec()
+      enableAutoEnter: @getEnableAutoEnter()
+      enableHistory: @isNiconamaEnabled 'history'
+    LOGGER.log "[Config] Get config for autojump", conf
     return conf
 
 
-class NicoInfo
-  liveDataList: []
-
+bg.NicoInfo = class NicoInfo
+  # === Constructor.
   constructor: (@config) ->
-    @liveDataList.push (new Favorite @config)
-    @liveDataList.push (new Timeshift @config)
-    @liveDataList.push (new Official @config)
-    @addEventListeners()
-    @init()
+    @liveDataList = [
+      new bg.Favorite(@config),
+      new bg.Timeshift(@config),
+      new bg.Official(@config)
+    ]
+    @_init()
 
-  addEventListeners: ->
-    return
-
-  init: ->
-    chrome.browserAction.setBadgeText text: ''
+  _init: ->
     @updateAll true, false
     return
 
@@ -443,7 +393,7 @@ class NicoInfo
     for liveData in @liveDataList
       if liveData.id is key
         return liveData
-    throw new Error "Error: invalid key #{key}"
+    throw Error "Invalid key #{key}"
 
   getData: (key) ->
     return @getLiveData(key).data
@@ -454,106 +404,113 @@ class NicoInfo
   isUpdated: (key, value) ->
     liveData = @getLiveData key
     if value?
-      liveData.isUpdated = value
+      liveData.isUpdated = !!value
     return liveData.isUpdated
 
-  getLasetUpdateTime: (key) ->
+  getLastUpdateTime: (key) ->
     try
       return @getLiveData(key).lastUpdateTime
 
   countBadge: (key) ->
     return @getLiveData(key).countBadge()
 
-  # ===== Update =====
   updateAll: (force=false, useCache=true) =>
     for liveData in @liveDataList
       liveData.update force, useCache
     return
 
 
-class LiveChecker
-  # TODO 要調整
-  @CHECK_TIMER_INTERVAL_SEC: 120
-  @NOTIFICATION_TIMEOUT_SEC: 3.5
-  # @NOTIFICATION_URL: "chrome-extension://#{location.host}/html/notification.html#"
-  @NOTIFICATION_URL: (chrome.extension.getURL 'html/notification.html') + '#'
+bg.LiveChecker = class LiveChecker
+  @CHECK_TIMER_INTERVAL_SEC: 30
 
-  notificationTargets: null
-  # lv1234567890: [ 'before', 'gate', 'onair' ]
-  notificationHistory: {}
-  openTabHistory: {}
-
-  deferNotification: null
-  deferOpenTab: null
-
+  # === Constructor.
   constructor: (@config, @nicoInfo) ->
-    @addEventListeners()
+    @badge = new bg.Badge @config, @nicoInfo
+    @openTab = new bg.OpenTab @config, @nicoInfo
+    @notification = new bg.Notification @config, @nicoInfo
+    @_initEventListeners()
 
-  addEventListeners: ->
-    setTimeout @onTimeoutCheck,
-      LiveChecker.CHECK_TIMER_INTERVAL_SEC * 1000
+  _initEventListeners: ->
+    time = bg.LiveChecker.CHECK_TIMER_INTERVAL_SEC * 1000
+    LOGGER.log "[LiveChecker] Setup check timer", time
+    setTimeout @_onTimeoutCheck, time
     return
 
-  getNotificationTarget: (index) ->
-    if not @notificationTargets or @notificationTargets.length <= index
-      throw new Error "Error: invalid index #{index}"
-    return @notificationTargets[index]
-
-  # ===== Check =====
-  onTimeoutCheck: =>
+  _onTimeoutCheck: =>
+    LOGGER.log '[LiveChecker] Start live checker process.'
     $.when(
-      @setBadge()
-      ,( =>
-        # Notify.
-        LOGGER.log 'Start notification process.'
-        try
-          @deferNotification = $.Deferred()
-          @setNotificationTargets()
-          @showHtmlNotifications()
-        catch error
-          @notificationTargets = null
-          throw error
-        return @deferNotification.promise()
-      )()
-      ,( =>
-        # Open tabs.
-        LOGGER.log 'Start open tabs process.'
-        @deferOpenTab = $.Deferred()
-        @openTabs @getOpenTabTargets()
-        return @deferOpenTab.promise()
-      )()
+      @badge.run(), @notification.run(), @openTab.run()
     ).always =>
-      LOGGER.log 'Check process finish all.'
-      setTimeout @onTimeoutCheck,
-        LiveChecker.CHECK_TIMER_INTERVAL_SEC * 1000
+      LOGGER.log '[LiveChecker] End live check process.'
+      time = bg.LiveChecker.CHECK_TIMER_INTERVAL_SEC * 1000
+      LOGGER.log "[LiveChecker] Setup check timer", time
+      setTimeout @_onTimeoutCheck, time
+      return
     return
 
-  # ===== Badge =====
-  setErrorBadge: ->
-    chrome.browserAction.setBadgeBackgroundColor color: [255, 0, 0, 255]
-    chrome.browserAction.setBadgeText text: '' + 'x'
-    return
+  # === Public methods.
+  getNotificationTarget: (index) ->
+    return @notification.getTargets index
 
-  setBadge: =>
-    LOGGER.log 'Start setBadge process.'
+
+bg.Badge = class Badge
+  @BG_COLOR: [0, 80, 255, 255]
+  @BG_COLOR_ERROR: [255, 0, 0, 255]
+
+  # === Constructor.
+  constructor: (@config, @nicoInfo) ->
+    chrome.browserAction.setBadgeText text: ''
+
+  # === Public methods.
+  run: ->
+    LOGGER.log '[Badge] Start set badge process.'
     liveDataList = @nicoInfo.liveDataList
+    # Check data error.
     for liveData in liveDataList
       if liveData.isError
-        LOGGER.warn "Set error badge #{liveData.id}"
-        @setErrorBadge()
+        LOGGER.warn "[Badge] Set error badge #{liveData.id}"
+        @_setErrorBadge()
         return
+    # Count for badge.
     count = 0
     for liveData in liveDataList
       count += liveData.countBadge()
-    LOGGER.log "Set badge: #{count}"
-    count or= ''
-    chrome.browserAction.setBadgeBackgroundColor color: [0, 80, 255, 255]
-    chrome.browserAction.setBadgeText text: '' + count
-    liveDataList = null
+    # Set badge.
+    LOGGER.log "[Badge] Set badge: #{count}"
+    @_setBadge count
+    LOGGER.log '[Badge] End set badge process.'
     return
 
-  # ===== Open tab =====
-  getOpenTabTargets: ->
+  # === Helper methods.
+  _setBadge: (text='') ->
+    text += ''
+    chrome.browserAction.setBadgeBackgroundColor color: bg.Badge.BG_COLOR
+    chrome.browserAction.setBadgeText text: text
+    return
+
+  _setErrorBadge: ->
+    chrome.browserAction.setBadgeBackgroundColor color: bg.Badge.BG_COLOR_ERROR
+    chrome.browserAction.setBadgeText text: '' + 'x'
+    return
+
+
+bg.OpenTab = class OpenTab
+  # === Constructor.
+  constructor: (@config, @nicoInfo) ->
+    # === Properties.
+    # lv1234567890: [ 'before', 'gate', 'onair' ]
+    @history = {}
+    @defer = null
+
+  # === Public methods.
+  run: ->
+    LOGGER.log '[OpenTab] Start open tabs process.'
+    @defer = $.Deferred()
+    @_openTabs @_getTargets()
+    return @defer.promise()
+
+  # === Helper methods.
+  _getTargets: ->
     liveDataList = @nicoInfo.liveDataList
     openTabTargets = []
     for liveData in liveDataList
@@ -565,442 +522,272 @@ class LiveChecker
       if isBeforeEnabled
         for item in n.before
           continue if item.commuId and not @config.isOpentabEnable item.commuId
-          if @openTabHistory[item.id]
-            unless 'before' in @openTabHistory[item.id]
-              @openTabHistory[item.id].push 'before'
+          if @history[item.id]
+            unless 'before' in @history[item.id]
+              @history[item.id].push 'before'
             continue
-          @openTabHistory[item.id] = []
-          @openTabHistory[item.id].push 'before'
+          @history[item.id] = []
+          @history[item.id].push 'before'
           openTabTargets.push item.link
       if isBeforeEnabled or isGateEnabled
         for item in n.gate
           continue if item.commuId and not @config.isOpentabEnable item.commuId
-          if @openTabHistory[item.id]
-            unless 'gate' in @openTabHistory[item.id]
-              @openTabHistory[item.id].push 'gate'
+          if @history[item.id]
+            unless 'gate' in @history[item.id]
+              @history[item.id].push 'gate'
             continue
-          @openTabHistory[item.id] = []
-          @openTabHistory[item.id].push 'gate'
+          @history[item.id] = []
+          @history[item.id].push 'gate'
           openTabTargets.push item.link
       if isBeforeEnabled or isGateEnabled or isOnairEnabled
         for item in n.onair
           continue if item.commuId and not @config.isOpentabEnable item.commuId
-          if @openTabHistory[item.id]
-            unless 'onair' in @openTabHistory[item.id]
-              @openTabHistory[item.id].push 'onair'
+          if @history[item.id]
+            unless 'onair' in @history[item.id]
+              @history[item.id].push 'onair'
             continue
-          @openTabHistory[item.id] = []
-          @openTabHistory[item.id].push 'onair'
+          @history[item.id] = []
+          @history[item.id].push 'onair'
           openTabTargets.push item.link
     # TODO Remove unnecessary history.
-    LOGGER.log "Open tab: total #{openTabTargets.length}", openTabTargets
-    liveDataList = null
+    if openTabTargets.length > 0
+      LOGGER.info "[OpenTab] Total open tab: #{openTabTargets.length}"
+      LOGGER.log openTabTargets
     return openTabTargets
 
-  openTabs: (targets, index=0) ->
-    if index >= targets.length
-      LOGGER.log "Open tab complete"
-      @deferOpenTab.resolve()
+  _openTabs: (targets) ->
+    n = targets.length
+    tryNext = (index) =>
+      if index >= n
+        LOGGER.log '[OpenTab] End open tabs process.'
+        @defer.resolve()
+        targets = null
+        index = null
+        n = null
+        tryNext = null
+        return
+      chrome.tabs.query {}, (tabs) =>
+        try
+          target = targets[index]
+          if @_openTab target, tabs
+            LOGGER.log "[OpenTab] Open tab: #{index} - #{target}"
+          else
+            LOGGER.info "[OpenTab] Cancel open tab (already opened): #{index} - #{target}"
+          tryNext index + 1
+        catch error
+          LOGGER.error "[OpenTab] Catch error in _openTabs.", error
+          LOGGER.error error.stack if error.stack
+          @defer.reject()
+        index = null
+        return
       return
-    chrome.tabs.query {}, (@onQueryCallback targets, index)
-    targets = null
+    tryNext 0
     return
 
-  onQueryCallback: (targets, index=0) ->
-    return (result) =>
-      try
-        target = targets[index]
-        matchUrl = targets[index].replace /http[s]?:\/\//, ''
-        # re = new RegExp matchUrl
-        isOpened = false
-        for tab in result
-          if tab.url?.match matchUrl
-            # Already opened.
-            LOGGER.log "Cancel open tab (already opened): #{index} - #{target}"
-            isOpened = true
-            break
-        unless isOpened
-          LOGGER.log "Open tab: #{index} - #{target}"
-          chrome.tabs.create(
-            url: target
-            active: false
-          )
-        @openTabs targets, index + 1
-        targets = null
-      catch error
-        LOGGER.error "Error: Failure in open tab", error
-        LOGGER.error error.stack if error.stack
-        @deferOpenTab.reject()
-      return
+  _openTab: (url, tabs) ->
+    matchUrl = url.replace(/http[s]?:\/\//, '').replace(/\?.*/, '')
+    re = new RegExp matchUrl
+    for tab in tabs
+      if tab.url?.match re
+        # Already opened.
+        return false
+    chrome.tabs.create(
+      url: url
+      active: false
+    )
+    return true
 
-  # ===== Notification =====
-  setNotificationTargets: ->
-    if @notificationTargets
-      LOGGER.log 'Cancel notification (now notifying)'
+
+bg.Notification = class Notification
+  @NOTIFICATION_TIMEOUT_SEC: 3.5
+  # @NOTIFICATION_URL: "chrome-extension://#{location.host}/html/notification.html#"
+  @NOTIFICATION_URL: (chrome.extension.getURL 'html/notification.html') + '#'
+
+  # === Constructor.
+  constructor: (@config, @nicoInfo) ->
+    # === Properties.
+    # lv1234567890: [ 'before', 'gate', 'onair' ]
+    @history = {}
+    @targets = null
+    @index = 0
+    @ntf = null
+    @cancelTimer = null
+    @defer = null
+
+  # === Public methods.
+  run: ->
+    LOGGER.log '[Notification] Start notification process.'
+    try
+      @defer = $.Deferred()
+      @_makeTargets()
+      @_notifyWithHtml()
+    catch error
+      @targets = null
+      @defer.reject()
+      throw error
+    return @defer.promise()
+
+  getTargets: (index) ->
+    if not @targets or @targets.length <= index
+      throw Error "invalid index #{index}"
+    return @targets[index]
+
+  # === Helper methods.
+  _makeTargets: ->
+    if @targets
+      LOGGER.info '[Notification] Cancel notification (now notifying)'
       return
-    @notificationTargets = []
+    @targets = []
     liveDataList = @nicoInfo.liveDataList
     for liveData in liveDataList
       n = liveData.getNofications()
-      # LOGGER.log "Create notify data #{liveData.id}", n
+      # LOGGER.log "[Notification] Create notify data #{liveData.id}", n
       isBeforeEnabled = @config.isBeforeNotificationEnabled liveData.id
       isGateEnabled = @config.isGateNotificationEnabled liveData.id
       isOnairEnabled = @config.isOnairNotificationEnabled liveData.id
       if isBeforeEnabled
         for item in n.before
-          if @notificationHistory[item.id]
-            unless 'before' in @notificationHistory[item.id]
-              @notificationHistory[item.id].push 'before'
+          if @history[item.id]
+            unless 'before' in @history[item.id]
+              @history[item.id].push 'before'
             continue
-          @notificationHistory[item.id] = []
-          @notificationHistory[item.id].push 'before'
-          @notificationTargets.push item
+          @history[item.id] = []
+          @history[item.id].push 'before'
+          @targets.push item
       if isBeforeEnabled or isGateEnabled
         for item in n.gate
-          if @notificationHistory[item.id]
-            unless 'gate' in @notificationHistory[item.id]
-              @notificationHistory[item.id].push 'gate'
+          if @history[item.id]
+            unless 'gate' in @history[item.id]
+              @history[item.id].push 'gate'
             continue
-          @notificationHistory[item.id] = []
-          @notificationHistory[item.id].push 'gate'
-          @notificationTargets.push item
+          @history[item.id] = []
+          @history[item.id].push 'gate'
+          @targets.push item
       if isBeforeEnabled or isGateEnabled or isOnairEnabled
         for item in n.onair
-          if @notificationHistory[item.id]
-            unless 'onair' in @notificationHistory[item.id]
-              @notificationHistory[item.id].push 'onair'
+          if @history[item.id]
+            unless 'onair' in @history[item.id]
+              @history[item.id].push 'onair'
             continue
-          @notificationHistory[item.id] = []
-          @notificationHistory[item.id].push 'onair'
-          @notificationTargets.push item
+          @history[item.id] = []
+          @history[item.id].push 'onair'
+          @targets.push item
     # TODO Remove unnecessary history.
-    LOGGER.log "Notify: total #{@notificationTargets.length}", @notificationTargets
-    liveDataList = null
+    if @targets.length > 0
+      LOGGER.info "[Notification] Total notifications: #{@targets.length}"
+      LOGGER.log @targets
     return
 
-  showHtmlNotifications: (index=0) ->
-    if not @notificationTargets or index >= @notificationTargets.length
-      LOGGER.log "Notification complete"
-      @notificationTargets = null
-      @deferNotification.resolve()
+  _notifyWithHtml: ->
+    if not @targets or @index >= @targets.length
+      LOGGER.log '[Notification] End notification process.'
+      t = @targets
+      @_clean()
+      @defer.resolve t
       return
-    url = LiveChecker.NOTIFICATION_URL + index
-    LOGGER.log "Notify(html) #{url}"
-    notification = webkitNotifications.createHTMLNotification url
-    notification.ondisplay = @ondisplayNotification notification
-    notification.onclose = @oncloseNotification notification, index
-    notification.onerror = @onerrorNotification notification, index
-    notification.show()
+    url = bg.Notification.NOTIFICATION_URL + @index
+    LOGGER.log "[Notification] Notify(html) #{url}\n", @targets[@index]
+    @ntf = webkitNotifications.createHTMLNotification url
+    @ntf.ondisplay = @_ondisplayNotification
+    @ntf.onclose = @_oncloseNotification
+    @ntf.onerror = @_onerrorNotification
+    @ntf.show()
     return
 
-  ondisplayNotification: (notification) ->
-    return (event) =>
-      # event.curentTarget
-      setTimeout(
-        (@onTimeoutNotification notification),
-        LiveChecker.NOTIFICATION_TIMEOUT_SEC * 1000
-      )
-      notification = null
+  _ondisplayNotification: (event) =>
+    # event.curentTarget
+    @cancelTimer = setTimeout =>
+      @cancelTimer = null
+      @ntf.cancel() if @ntf
+      event = null
       return
+    , bg.Notification.NOTIFICATION_TIMEOUT_SEC * 1000
+    return
 
-  onTimeoutNotification: (notification) ->
-    return =>
-      notification.cancel()
-      notification = null
-      return
+  _oncloseNotification: (event) =>
+    if @cancelTimer
+      clearTimeout @cancelTimer
+      @cancelTimer = null
+    @index += 1
+    @_notifyWithHtml()
+    return
 
-  oncloseNotification: (notification, index) ->
-    return (event) =>
-      @showHtmlNotifications index + 1
-      notification = null
-      return
+  _onerrorNotification: (event) =>
+    LOGGER.error "[Notification] Notification error index=#{@index}", @targets
+    t = @targets[@index]
+    @_clean()
+    @defer.reject t
+    return
 
-  onerrorNotification: (notification, index) ->
-    return (event) =>
-      LOGGER.error "Error: notification error index=#{index}"
-      @notificationTargets = null
-      @deferNotification.reject()
-      notification = null
-      return
-
-  showNotification: (id, iconUrl, title, msg)->
-    LOGGER.log "Notify #{id}"
-    LOGGER.log "[#{title}] #{msg}"
-    LOGGER.log "#{iconUrl}"
+  _notify: (id, iconUrl, title, msg)->
+    LOGGER.log "[Notification] Notify #{id}\n[#{title}] #{msg}\n#{iconUrl}"
     webkitNotifications.createNotification(iconUrl, title, msg).show()
     return
 
-
-class AjaxEx
-  @RETRY_STATUS: ['0', '500']
-
-  retryCount: 0
-  request: null
-  defer: null
-
-  constructor: (@retryIntervalSec=5, @maxRetryCount=2) ->
-
-  ajax: (@request) ->
-    @defer = $.Deferred()
-    $.ajax(@request).then(@_onDone, @_onFail)
-    return @defer.promise()
-
-  _onDone: (response) =>
-    LOGGER.log "[AjaxEx] Success: #{@request.url}"
-    @defer.resolve response
-    @_clean()
-    return
-
-  _onFail: (response) =>
-    try
-      @_retry response
-    catch error
-      LOGGER.error '[AjaxEx] Abort... could not retry', error
-      LOGGER.error error.stack if error.stack
-      @defer.reject response
-      @_clean()
-    return
-
-  _retry: (response) ->
-    status = response.status + ''
-    LOGGER.error "[AjaxEx] Error: retryCount=#{@retryCount}," +
-      " status=#{status}, url=#{@request.url}", @request, response
-    if @retryCount >= 2
-      throw new Error "Max retry count over: retryCount=#{@retryCount}"
-    unless status in AjaxEx.RETRY_STATUS
-      throw new Error "Unknown status: status=#{status}"
-    @retryCount += 1
-    LOGGER.info "[AjaxEx] Retry #{@retryCount}"
-    @defer.notify @retryCount
-    @_sleep(
-      @retryIntervalSec
-    ).then(=>
-      $.ajax(@request).then(@_onDone, @_onFail)
-      return
-    )
-    return
-
-  _sleep: (sec) ->
-    d = $.Deferred()
-    setTimeout(->
-      d.resolve()
-      d = null
-    , sec * 1000)
-    return d.promise()
-
   _clean: ->
-    @request = null
-    @defer = null
+    @targets = null
+    @index = 0
+    @ntf = null
+    @cancelTimer = null
     return
 
 
-class BaseLiveData
+bg.BaseLiveData = class BaseLiveData
   @OFFICIAL_LIVE_RSS: 'http://live.nicovideo.jp/rss'
   @OFFICIAL_LIVE_COMINGSOON: 'http://live.nicovideo.jp/api/getindexzerostreamlist?status=comingsoon&zpage='
   @OFFICIAL_LIVE_RANK: 'http://live.nicovideo.jp/ranking?type=onair&main_provider_type=official'
   @LIVE_URL: 'http://live.nicovideo.jp/watch/'
-  @GATE_URL: 'http://live.nicovideo.jp/gate/'
-  @MY_PAGE_URL: 'http://live.nicovideo.jp/my'
 
-  fetchIntervalSec: 3
-
-  data: null
-  cache: null
-  isUpdated: false
-  lastUpdateTime: null
-  isError: false
-  isUpdateRunning: false
-
-  updateTimer: null
-
+  # === Constructor.
   constructor: (@id, @config) ->
-    @addEventListeners()
+    # === Properties.
+    @data = null
+    @cache = null
+    @isUpdated = false
+    @lastUpdateTime = null
+    @isError = false
+    @isUpdateRunning = false
+    @updateTimer = null
+    # === Event.
+    @_initEventListeners()
 
-  addEventListeners: ->
-    @updateTimer = setTimeout @onTimeoutUpdate, @getUpdateInterval()
+  # === Event Listeners.
+  _initEventListeners: ->
+    LOGGER.log "[BaseLiveData] Setup update timer #{@id}", @getUpdateInterval()
+    @updateTimer = setTimeout @_onTimeoutUpdate, @getUpdateInterval()
     return
 
-  onTimeoutUpdate: =>
+  _onTimeoutUpdate: =>
     @update()
-    @updateTimer = setTimeout @onTimeoutUpdate, @getUpdateInterval()
+    LOGGER.log "[BaseLiveData] Setup update timer #{@id}", @getUpdateInterval()
+    @updateTimer = setTimeout @_onTimeoutUpdate, @getUpdateInterval()
     return
 
+
+  # === Public methods.
   getUpdateInterval: ->
     return @config.getNiconamaUpdateIntervalSec() * 1000
 
+  ## Common update method.
   update: (force=false, useCache=true) =>
     if not force and @isUpdateRunning
-        LOGGER.warn "Cancel update is running #{@id}"
+        LOGGER.warn "[BaseLiveData] Cancel update so it's' already running #{@id}"
         return false
     unless useCache
-      LOGGER.log "Clear cache #{@id}"
+      LOGGER.log "[BaseLiveData] Clear cache #{@id}"
       @cache = null
       @data = null
     try
       @isUpdateRunning = true
       @updateData()
     catch error
-      @updateError 'Error in update', error
+      @updateError '[BaseLiveData] Catch error in update', error
       return false
     return true
 
+  ## Update method for for override.
   updateData: ->
     return
-
-  isCancelFethDetail: (item, now) ->
-    if item.flag and item.flag is 'disable'
-      LOGGER.log "Cancel fetch detail #{@id} (disable)"
-      return true
-    else if item.openTime and item.startTime
-      if item.endTime
-        LOGGER.log "Cancel fetch detail #{@id} (all times exists)"
-        return true
-      else
-        if now < item.startTime.getTime()
-          LOGGER.log "Cancel fetch detail #{@id}
-            (endTime not exists but not starts yet)"
-          return true
-    return false
-
-  fetchDetail: (index, results) ->
-    LOGGER.log "Fetch detail #{@id} #{index} "
-    if index < results.length
-      now = (new Date).getTime()
-      for nextIndex in [index..results.length-1]
-        item = results[nextIndex]
-        useCache = @setDataFromCache item, @cache
-        if @isCancelFethDetail item, now
-          continue
-        if useCache
-          LOGGER.warn "Fetch detail with cache #{index} #{@id}", item
-        else
-          LOGGER.info "Fetch detail (no cache) #{index} #{@id}", item
-        setTimeout(
-          @onTimeoutFetch(
-            url: BaseLiveData.GATE_URL + item.id,
-            (@fetchDetailSuccess nextIndex, results),
-            (@fetchError "from detail id=#{item.id}")
-          )
-        , @fetchIntervalSec * 1000)
-        results = null
-        return
-    @updateComplete results
-    results = null
-    return
-
-  onTimeoutFetch: (request, doneFunc, failFunc) ->
-    return =>
-      ajax = new AjaxEx
-      ajax.ajax(request).done(doneFunc).fail(failFunc)
-      request = null
-      doneFunc = null
-      failFunc = null
-      ajax = null
-      return
-
-  setDataFromCache: (data, cache) ->
-    return false unless cache
-    for c in cache
-      if c.id is data.id
-        data.openTime or= c.openTime if c.openTime
-        data.startTime or= c.startTime if c.startTime
-        data.endTime or= c.endTime if c.endTime
-        data.thumnail or= c.thumnail if c.thumnail
-        data.description or= c.description if c.description
-        LOGGER.log "Use cache #{@id}", data
-        return true
-    return false
-
-  fetchDetailSuccess: (index, results) ->
-    return (response) =>
-      try
-        @setDetailFromResponse results[index], response
-        LOGGER.log "Fetch detail #{@id} finish: #{new Date}"
-        LOGGER.log results[index]
-        @fetchDetail index + 1, results
-      catch error
-        @updateError 'Error in fetchDetailSuccess', error
-      results = null
-      return
-
-  setDetailFromResponse: (data, response) ->
-    $page = $($.parseHTML (@transIMG response))
-    commuUrl = $page.find('.com,.chan .smn a').prop('href')
-    if commuUrl
-      data.commuId = commuUrl.match(/\/((ch|co)\d+)/)?[1]
-    else
-      LOGGER.log "Could not get commuUrl #{@id}", data
-    if not data.openTime or not data.startTime
-      time = $page.find('#bn_gbox .kaijo').text().trim()
-      timeMatch = time.match /(\d\d\d\d)\/(\d\d\/\d\d).*開場:(\d\d:\d\d).*開演:(\d\d:\d\d)/
-      if timeMatch
-        yearStr = timeMatch[1]
-        dateStr = timeMatch[2]
-        openTimeStr = timeMatch[3]
-        startTimeStr = timeMatch[4]
-        data.openTime or= str2date yearStr, dateStr, openTimeStr
-        data.startTime or= str2date yearStr, dateStr, startTimeStr
-
-    data.thumnail or= $page.find('#bn_gbox > .bn > meta').attr 'content'
-
-    unless data.description
-      data.description = $page.find('.stream_description')
-        .text().trim().replace(/\r\n?/g, '\n').replace /\n/g,' '
-
-    unless data.endTime
-      endTimeMatch = $page.find('#bn_gbox .kaijo').next().text()
-        .match /この番組は(\d\d\d\d)\/(\d\d\/\d\d).*(\d\d:\d\d)/
-      if endTimeMatch
-        endYearStr = endTimeMatch[1]
-        endDateStr = endTimeMatch[2]
-        endTimeStr = endTimeMatch[3]
-        data.endTime = str2date endYearStr, endDateStr, endTimeStr
-    data = null
-    response = null
-    return
-
-  fetchError: (msg) ->
-    return (response) =>
-        @updateError msg, response
-        msg = null
-      return
-
-  updateError: (msg, obj=null) ->
-    @isUpdateRunning = false
-    @isError = true
-    errmsg = "Error: update #{@id} #{msg} (#{new Date})"
-    if obj
-      LOGGER.error errmsg, obj
-    else
-      LOGGER.error errmsg
-    LOGGER.error msg.stack if msg.stack
-    LOGGER.error obj.stack if obj.stack
-
-  updateComplete: (results) ->
-    @data = null
-    @cache = results
-    @isUpdateRunning = false
-    @isUpdated = true
-    @isError = false
-    @lastUpdateTime = new Date
-    LOGGER.info "===== Update #{@id} complete ====="
-    LOGGER.log @lastUpdateTime
-    LOGGER.log results
-    results = null
-    return
-
-  checkErrorPage: ($page) ->
-    $error_type = $page.find '.error_type'
-    return unless $error_type.length
-    # $errorBox = $page.find('#Error_Box')
-    # msg = $errorBox.text()
-    #   .trim()
-    #   .replace(/\r\n?/g, '\n').replace(/\n/g,' ')
-    #   .replace(/[ \t]+/g,  '')
-    # cause = $page.find('#Error_Box .error_type').text()
-    LOGGER.error $page
-    cause = $error_type.text()
-    throw new Error "Cause: #{cause}"
 
   getValidData: ->
     if @cache
@@ -1009,6 +796,35 @@ class BaseLiveData
       return @data
     else
       return []
+
+  fetchError: (msg) ->
+    return (response) =>
+        @updateError "Fetch error: #{msg}", response
+        msg = null
+      return
+
+  updateError: (msg, obj=null) ->
+    @isUpdateRunning = false
+    @isError = true
+    errmsg = "[BaseLiveData][#{@id}] Update error: #{msg} (#{new Date})"
+    if obj
+      LOGGER.error errmsg, obj
+    else
+      LOGGER.error errmsg
+    LOGGER.error msg.stack if msg.stack
+    LOGGER.error obj.stack if obj.stack
+    return
+
+  updateComplete: (results) =>
+    @data = null
+    @cache = results
+    @isUpdateRunning = false
+    @isUpdated = true
+    @isError = false
+    @lastUpdateTime = new Date
+    LOGGER.info "===== Update #{@id} complete: #{@lastUpdateTime} ====="
+    LOGGER.log results
+    return
 
   countBadge: ->
     time = @config.getBadgeBeforeTimeSec @id
@@ -1019,14 +835,13 @@ class BaseLiveData
     count = 0
     if @config.isBeforeBadgeEnabled @id
       count = beforeCount + gateCount + onairCount
-      LOGGER.log "Count badge before open gate: #{@id} = #{count}"
+      LOGGER.log "[BaseLiveData] Count badge before open gate: #{@id} = #{count}"
     else if @config.isGateBadgeEnabled @id
       count = gateCount + onairCount
-      LOGGER.log "Count badge open gate: #{@id} = #{count}"
+      LOGGER.log "[BaseLiveData] Count badge open gate: #{@id} = #{count}"
     else if @config.isOnairBadgeEnabled @id
       count = onairCount
-      LOGGER.log "Count badge onair: #{@id} = #{count}"
-    notifications = null
+      LOGGER.log "[BaseLiveData] Count badge onair: #{@id} = #{count}"
     return count
 
   # {
@@ -1040,7 +855,7 @@ class BaseLiveData
     items = @getValidData()
     results = {before:[], gate: [], onair: []}
     if items.length is 0
-      LOGGER.log "No data #{@id} for notification"
+      LOGGER.log "[BaseLiveData] No data #{@id} for notification"
       return results
     now = (new Date).getTime()
     for item in items
@@ -1050,7 +865,6 @@ class BaseLiveData
         results.gate.push item
       else if @isLiveBeforeOpenGate item, now, beforeTimeSec
         results.before.push item
-    items = null
     return results
 
   isLiveOnair: (item, now) ->
@@ -1084,53 +898,328 @@ class BaseLiveData
       return true
     return false
 
-  transIMG: (html) ->
-    return html.replace /<img([^>]+)>/g, '<imgx$1>'
+
+bg.DetailFetcher = class DetailFetcher
+  @GATE_URL: 'http://live.nicovideo.jp/gate/'
+
+  # === Constructor.
+  constructor: (@id, @data, @cache, opt) ->
+    @defer = null
+    @index = 0
+    @fetchIntervalSec = 3
+    @isCancelFunc = null
+    if opt
+      @fetchIntervalSec = opt.fetchIntervalSec or @fetchIntervalSec
+      @isCancelFunc = opt.isCancelFunc
+
+  _clean: ->
+    @id = null
+    @data = null
+    @cache = null
+    @isCancelFunc = null
+
+  @fetch: (id, data, cache, opt) ->
+    return (new bg.DetailFetcher id, data, cache, opt).fetch()
+
+  fetch: ->
+    LOGGER.log "[DetailFetcher][#{@id}] Start fetch detail process."
+    try
+      @defer = $.Deferred()
+      @_fetchDetail()
+    catch error
+      @defer.reject()
+      throw error
+    return @defer.promise()
+
+  _fetchDetail: ->
+    if not @data or @index >= @data.length
+      @defer.resolve @data
+      @_clean()
+      return
+    now = Date.now()
+    for nextIndex in [@index..@data.length-1]
+      @index = nextIndex
+      item = @data[@index]
+      useCache = @_setFromCache item, @cache
+      if @_isCancel item, now
+        continue
+      if useCache
+        LOGGER.warn "[DetailFetcher][#{@id}] Fetch detail" +
+          " (with cache) #{@index}", item.link
+      else
+        LOGGER.info "[DetailFetcher][#{@id}] Fetch detail" +
+          " (no cache) #{@index}\n", item.link, item.startTime, item.openTime, item.endTime
+      setTimeout @_onTimeout, @fetchIntervalSec * 1000
+      return
+    @defer.resolve @data
+    @_clean()
+    return
+
+  ## Check if cancel fetching detail data.
+  _isCancel: (item, now) ->
+    ret = @_isCancelForCommon item, now
+    if @isCancelFunc
+      ret = @isCancelFunc item, now, ret
+      if ret
+        LOGGER.log "[DetailFetcher][#{@id}] Cancel fetch detail #{@index} (isCancelFunc)", item
+    return ret
+
+  _isCancelForCommon: (item, now)->
+    if item.flag and item.flag is 'disable'
+      LOGGER.log "[DetailFetcher][#{@id}]  Cancel fetch detail #{@index} (disable)", item
+      return true
+    else if item.openTime and item.startTime
+      if item.endTime
+        LOGGER.log "[DetailFetcher][#{@id}]  Cancel fetch detail #{@index} (all times exists)", item
+        return true
+      else
+        if now < item.startTime.getTime()
+          LOGGER.log "[DetailFetcher][#{@id}]  Cancel fetch detail #{@index}" +
+            "(endTime not exists but not starts yet)", item
+          return true
+    return false
+
+  _onTimeout: =>
+    common.AjaxEx.ajax(
+      url: bg.DetailFetcher.GATE_URL + @data[@index].id
+    ).done(@_onDone).fail(@_onFail)
+    return
+
+  _onDone: (response) =>
+    try
+      item = @data[@index]
+      @_setFromResponse item, response
+      LOGGER.log "[DetailFetcher][#{@id}] Fetch detail #{@index} done: #{new Date}", item
+      unless item and item.thumnail and item.description
+        LOGGER.error "[DetailFetcher][#{@id}] Data is incomplete!!", item
+      @defer.notify @index, item
+      @index += 1
+      @_fetchDetail()
+    catch error
+      LOGGER.error "[DetailFetcher][#{@id}] Catch error in _onDone", error
+      @defer.reject error
+      @_clean()
+    return
+
+  _onFail: (response) =>
+    LOGGER.error "[DetailFetcher][#{@id}] Fail in AjaxEx id=#{@data[@index].id}", response
+    @defer.reject response
+    @_clean()
+    return
+
+  _setFromCache: (data, cache) ->
+    return false unless cache
+    for c in cache
+      if c.id is data.id
+        data.openTime or= c.openTime if c.openTime
+        data.startTime or= c.startTime if c.startTime
+        data.endTime or= c.endTime if c.endTime
+        data.thumnail or= c.thumnail if c.thumnail
+        data.description or= c.description if c.description
+        LOGGER.log "[DetailFetcher][#{@id}] Use cache", data
+        return true
+    return false
+
+  _setFromResponse: (data, response) ->
+    $page = $($.parseHTML (common.transIMG response))
+    commuUrl = $page.find('.com,.chan .smn a').prop('href')
+    if commuUrl
+      data.commuId = commuUrl.match(/\/((ch|co)\d+)/)?[1]
+    else
+      LOGGER.log "[DetailFetcher][#{@id}] Could not get commuUrl", data
+    if not data.openTime or not data.startTime
+      time = $page.find('#bn_gbox .kaijo').text().trim()
+      timeMatch = time.match /(\d\d\d\d)\/(\d\d\/\d\d).*開場:(\d\d:\d\d).*開演:(\d\d:\d\d)/
+      if timeMatch
+        yearStr = timeMatch[1]
+        dateStr = timeMatch[2]
+        openTimeStr = timeMatch[3]
+        startTimeStr = timeMatch[4]
+        data.openTime or= common.str2date yearStr, dateStr, openTimeStr
+        data.startTime or= common.str2date yearStr, dateStr, startTimeStr
+
+    data.thumnail or= $page.find('#bn_gbox > .bn > meta').attr 'content'
+
+    unless data.description
+      data.description = $page.find('.stream_description')
+        .text().trim().replace(/\r\n?/g, '\n').replace /\n/g,' '
+
+    unless data.endTime
+      endTimeMatch = $page.find('#bn_gbox .kaijo').next().text()
+        .match /この番組は(\d\d\d\d)\/(\d\d\/\d\d).*(\d\d:\d\d)/
+      if endTimeMatch
+        endYearStr = endTimeMatch[1]
+        endDateStr = endTimeMatch[2]
+        endTimeStr = endTimeMatch[3]
+        data.endTime = common.str2date endYearStr, endDateStr, endTimeStr
+    return
 
 
 # TODO クラス化したほうがいいかも
 # class LiveItem
 
 
-class Favorite extends BaseLiveData
+bg.MyPage = class MyPage
+  @URL: 'http://live.nicovideo.jp/my'
+  @TIMER_INTERVAL_SEC: 90
+  @RETRY_INTERVAL_SEC: 10
+
+  cache: null
+  updatedAt: null
+  timer: null
+
+  constructor: ->
+    @defer = null
+
+  @fetch: (nocache=false) ->
+    return (new bg.MyPage).fetch(nocache)
+
+  fetch: (nocache=false)->
+    LOGGER.log "[MyPage] Start fetch process."
+    @defer = $.Deferred()
+    @_fetchFromMypage nocache
+    return @defer.promise()
+
+  _setCache: (cache) ->
+    bg.MyPage::cache = cache
+    return
+
+  _setUpdatedAt: (updatedAt) ->
+    bg.MyPage::updatedAt = updatedAt
+    return
+
+  _setTimer: (timer) ->
+    bg.MyPage::timer = timer
+    return
+
+  _fetchFromMypage: (nocache)->
+    if nocache or not @cache
+      LOGGER.log "[MyPage] Fetch from mypage: now = #{new Date}"
+      common.AjaxEx.ajax(url: bg.MyPage.URL).done(@_onDone).fail(@_onFail)
+    else
+      LOGGER.log "[MyPage] Fetch from cache: now = #{new Date}"
+      setTimeout =>
+        @_resolve()
+        @_clean()
+        return
+      , 0
+    return
+
+  _onDone: (response) =>
+    try
+      $page = $($.parseHTML (common.transIMG response))
+      error = @_checkErrorPage $page
+      if error
+        @_reject error
+      else
+        @_setCache $page
+        @_setUpdatedAt new Date
+        LOGGER.info "[MyPage] Update cache: #{updatedAt = @updatedAt}"
+        @_resolve()
+    catch error
+      @_reject error
+    @_clean()
+    return
+
+  _onFail: (response) =>
+    e = Error '[MyPage] Error in AjaxEx'
+    e.response = response
+    @defer.reject @cache, @updatedAt, e
+    @_clean()
+    return
+
+  _resolve: ->
+    @defer.resolve @cache, @updatedAt
+    return
+
+  _reject: (error) ->
+    @defer.reject @cache, @updatedAt, error
+    return
+
+  _clean: ->
+    @defer = null
+    @_setupUpdateTimer bg.MyPage.TIMER_INTERVAL_SEC * 1000
+    LOGGER.log "[MyPage] End fetch process."
+    return
+
+  _setupUpdateTimer: (time) ->
+    if @timer
+      return
+    LOGGER.log '[MyPage] Setup update timer:', time
+    timer = setTimeout =>
+      LOGGER.log "[MyPage] Updating cache..."
+      bg.MyPage.fetch(true).done(=>
+        LOGGER.log "[MyPage] Updating cache... done"
+        @_setTimer null
+        @_setupUpdateTimer bg.MyPage.TIMER_INTERVAL_SEC * 1000
+        return
+      ).fail( =>
+        LOGGER.warn "[MyPage] Updating cache... fail"
+        @_setTimer null
+        @_setupUpdateTimer bg.MyPage.RETRY_INTERVAL_SEC * 1000
+        return
+      )
+      return
+    , time
+    @_setTimer timer
+    time = null
+    return
+
+  _checkErrorPage: ($page) ->
+    $error_type = $page.find '.error_type'
+    return unless $error_type.length
+    # $errorBox = $page.find('#Error_Box')
+    # msg = $errorBox.text()
+    #   .trim()
+    #   .replace(/\r\n?/g, '\n').replace(/\n/g,' ')
+    #   .replace(/[ \t]+/g,  '')
+    # cause = $page.find('#Error_Box .error_type').text()
+    cause = $error_type.text()
+    unless cause
+      LOGGER.error '[MyPage] Unknown cause:', $page.find('html')?.html()
+    return Error cause
+
+
+bg.Favorite = class Favorite extends bg.BaseLiveData
+  # === Constructor.
   constructor: (config) ->
     super 'favorite', config
 
+  # === Public methods.
   updateData: ->
-    return
-    @fetchFromMypage()
+    @_fetchFromMypage()
     return
 
   getUpdateInterval: ->
-    # TODO 要調整
-    return 180 * 1000
+    return 30 * 1000
 
-  fetchFromMypage: ->
-    ajax = new AjaxEx
-    ajax.ajax(
-      url: BaseLiveData.MY_PAGE_URL
-    ).done(
-      @fetchFromMypageSuccess
-    ).fail(
-      @fetchError("from mypage url=#{BaseLiveData.MY_PAGE_URL}")
-    )
-    ajax = null
+  # === Helper methods.
+  _fetchFromMypage: ->
+    LOGGER.log '[Favorite] Start fetch from mypage process.'
+    bg.MyPage.fetch().done(@_onDoneFetchMypage).fail(@_onFailFetchMyPage)
     return
 
-  fetchFromMypageSuccess: (response) =>
+  _onDoneFetchMypage: ($page, updatedAt) =>
     try
-      $page = $($.parseHTML (@transIMG response))
-      results = @getResultsFromMypage $page
-      if not results or results.length is 0
-        @checkErrorPage $page
-        LOGGER.log 'No results', response
+      LOGGER.log "[Favorite] Fetch mypage done", updatedAt
+      results = @_getResultsFromMypage $page
+      if not results
+        LOGGER.log '[Favorite] No results'
+      LOGGER.log '[Favorite] End fetch from mypage process.'
       @updateComplete results
     catch error
-      @updateError 'Error in fetchFromMypageSuccess', error
-    results = null
+      @updateError '[Favorite] Catch error in _fetchFromMypageSuccess', error
     return
 
-  getResultsFromMypage: ($page) ->
+  _onFailFetchMyPage: ($page, updatedAt, error) =>
+    if $page
+      LOGGER.log "[Favorite] Fetch mypage fail", updatedAt, error
+      @_onDoneFetchMypage $page, updatedAt
+    else
+      @updateError "[Favorite] Fetch mypage fail (updated at #{updatedAt})", error
+    return
+
+  _getResultsFromMypage: ($page) ->
     $items = $page.find '#Favorite_list .liveItems .liveItem,.liveItem_reserve,.liveItem_ch'
     now = new Date()
     nowYear = now.getFullYear()
@@ -1140,8 +1229,8 @@ class Favorite extends BaseLiveData
       $item = $(item)
       ret = {}
       a = $item.children('a').first()
-      ret.link = changeGate2Watch (a.attr 'href')
-      ret.id = getLiveIdFromUrl ret.link
+      ret.link = common.changeGate2Watch (a.attr 'href')
+      ret.id = common.getLiveIdFromUrl ret.link
       ret.title = a.attr 'title'
       ret.thumnail = a.children('imgx').first().attr('src').replace /\/s\//, '/'
       ret.commuId = ret.thumnail.match(/\/((ch|co)\d+)/)?[1]
@@ -1158,8 +1247,8 @@ class Favorite extends BaseLiveData
 
       dateStr = timeMatch[1]
 
-      ret.openTime = str2date nowYear, dateStr, openTimeStr if openTimeStr
-      ret.startTime = str2date nowYear, dateStr, startTimeStr
+      ret.openTime = common.str2date nowYear, dateStr, openTimeStr if openTimeStr
+      ret.startTime = common.str2date nowYear, dateStr, startTimeStr
       ret.description = $item.find('.liveItemTxt > p:nth-of-type(2)')[0].innerHTML
       results.push ret
 
@@ -1173,53 +1262,59 @@ class Favorite extends BaseLiveData
     return results
 
 
-class Timeshift extends BaseLiveData
+bg.Timeshift = class Timeshift extends bg.BaseLiveData
+  # === Constructor.
   constructor: (config) ->
     super 'timeshift', config
-    @fetchIntervalSec = 3.5
 
+  # === Public methods.
   updateData: ->
-    return
-    @fetchFromMypage()
-    return
-
-  fetchFromMypage: ->
-    ajax = new AjaxEx
-    ajax.ajax(
-      url: BaseLiveData.MY_PAGE_URL
-    ).done(
-      @fetchFromMypageSuccess
-    ).fail(
-      @fetchError("from mypage url=#{BaseLiveData.MY_PAGE_URL}")
-    )
-    ajax = null
+    @_fetchFromMypage()
     return
 
-  fetchFromMypageSuccess: (response) =>
+  # === Helper methods.
+  _fetchFromMypage: ->
+    LOGGER.log '[Timeshift] Start fetch from mypage process.'
+    bg.MyPage.fetch().done(@_onDoneFetchMypage).fail(@_onFailFetchMyPage)
+    return
+
+  _onDoneFetchMypage: ($page, updatedAt) =>
     try
-      $page = $($.parseHTML (@transIMG response))
-      results = @getResultsFromMypage $page
-      LOGGER.log "Fetch timeshift from mypage finish"
-      if not results or results.length is 0
-        @checkErrorPage $page
-        LOGGER.log 'No results', response
-      @fetchDetail 0, results
+      LOGGER.log "[Timeshift] Fetch mypage done", updatedAt
+      results = @_getResultsFromMypage $page
+      if not results
+        LOGGER.log '[Timeshift] No results'
+      LOGGER.log '[Timeshift] End fetch from mypage process.'
+      bg.DetailFetcher.fetch(
+        @id, results, @cache, fetchIntervalSec: 3.5
+      ).done(
+        @updateComplete
+      ).fail(
+        @fetchError "from fetch detail"
+      )
       @data = results
-      results = null
     catch error
-      @updateError 'Error in fetchFromMypageSuccess', error
+      @updateError '[Timeshift] Catch error in _fetchFromMypageSuccess', error
     return
 
-  getResultsFromMypage: ($page) ->
+  _onFailFetchMyPage: ($page, updatedAt, error) =>
+    if $page
+      LOGGER.log "[Timeshift] Fetch mypage fail", updatedAt, error
+      @_onDoneFetchMypage $page, updatedAt
+    else
+      @updateError "[Timeshift] Fetch mypage fail (#{updatedAt})", error
+    return
+
+  _getResultsFromMypage: ($page) ->
     $items = $page.find '#liveItemsWrap .liveItems .column'
     results = []
     for item, i in $items
       $item = $(item)
       ret = {}
       a = $item.find '.name > a'
-      ret.link = changeGate2Watch (a.attr 'href')
+      ret.link = common.changeGate2Watch (a.attr 'href')
       ret.title = a.attr 'title'
-      ret.id = getLiveIdFromUrl ret.link
+      ret.id = common.getLiveIdFromUrl ret.link
 
       $status = $item.find '.status .timeshift_watch'
       if $status.length > 0
@@ -1243,94 +1338,97 @@ class Timeshift extends BaseLiveData
     return results
 
 
-class Official extends BaseLiveData
+bg.Official = class Official extends bg.BaseLiveData
   constructor: (config) ->
     super 'official', config
 
   updateData: ->
-    return
-    @fetchFromRank()
+    @_fetchFromRank()
     return
 
-  fetchFromRank: ->
-    ajax = new AjaxEx
-    ajax.ajax(
-      url: BaseLiveData.OFFICIAL_LIVE_RANK
+  _fetchFromRank: ->
+    LOGGER.log '[Official] Start fetch from Rank.'
+    common.AjaxEx.ajax(
+      url: bg.BaseLiveData.OFFICIAL_LIVE_RANK
     ).done(
-      @fetchFromRankSuccess
+      @_fetchFromRankSuccess
     ).fail(
-      @fetchError("from rank url=#{BaseLiveData.OFFICIAL_LIVE_RANK}")
+      @fetchError "from rank url=#{bg.BaseLiveData.OFFICIAL_LIVE_RANK}"
     )
-    ajax = null
     return
 
-  fetchFromRankSuccess: (response) =>
+  _fetchFromRankSuccess: (response) =>
     try
-      $page = $($.parseHTML (@transIMG response))
-      results = @getResultsFromRank $page
-      LOGGER.log "Fetch official from rank finish"
-      @fetchFromComingsoon 1, results
+      $page = $($.parseHTML (common.transIMG response))
+      results = @_getResultsFromRank $page
+      LOGGER.log '[Official] End fetch from Rank.'
+      LOGGER.log '[Official] Start fetch from Commingsoon.'
+      @_fetchFromComingsoon 1, results
       @data = results
-      results = null
     catch error
-      @updateError 'Error in fetchFromRankSuccess', error
+      @updateError '[Official] Error in fetchFromRankSuccess', error
     return
 
-  getResultsFromRank: ($page) ->
+  _getResultsFromRank: ($page) ->
     results = []
     for item in $page.find '#official_ranking_main .ranking_video'
       ret = {}
       $item = $(item)
       ret.id = 'lv' + $item.find('.video_id')[0].innerHTML
       ret.title = $item.find('.video_title')[0].innerHTML
-      ret.link = BaseLiveData.LIVE_URL + ret.id
+      ret.link = bg.BaseLiveData.LIVE_URL + ret.id
       results.push ret
     return results
 
-  fetchFromComingsoon: (index, results)->
-    ajax = new AjaxEx
-    ajax.ajax(
-      url: BaseLiveData.OFFICIAL_LIVE_COMINGSOON + index,
+  _fetchFromComingsoon: (index, results) ->
+    common.AjaxEx.ajax(
+      url: bg.BaseLiveData.OFFICIAL_LIVE_COMINGSOON + index,
       type: 'GET',
       dataType: 'json'
     ).done(
-      @fetchFromComingsoonSuccess(index, results)
+      @_fetchFromComingsoonSuccess(index, results)
     ).fail(
-      @fetchError("from comingsoon url=#{BaseLiveData.OFFICIAL_LIVE_COMINGSOON + index}")
+      @fetchError "from comingsoon url=#{bg.BaseLiveData.OFFICIAL_LIVE_COMINGSOON + index}"
     )
-    ajax = null
-    results = null
     return
 
-  fetchFromComingsoonSuccess: (index, results)->
+  _fetchFromComingsoonSuccess: (index, results) ->
     return (response) =>
       try
         streamList = response.reserved_stream_list
         total = response.total
         unless streamList and streamList.length > 0 and index < total
-          LOGGER.log 'Fetch official from comingsoon finish all'
-          @fetchDetail 0, results
+          LOGGER.log '[Official] End fetch from Commingsoon.'
+          bg.DetailFetcher.fetch(
+            @id, results, @cache, isCancelFunc: @_isCancelFethDetail
+          ).done(
+            @updateComplete
+          ).fail(
+            @fetchError "from fetch detail"
+          )
           # TODO キャッシュがない場合にのみ設定するほうが良いかも
-          @official = results
+          @data = results
           results = null
+          index = null
           return
-        @getResultsFromComingsoon streamList, results
-        LOGGER.log "Fetch official from comingsoon finish #{index}"
+        @_getResultsFromComingsoon streamList, results
+        LOGGER.log "[Official] Fetch official from comingsoon finish #{index}"
         if index >= 10
-          LOGGER.error "Error in fetch comingsoon: index over #{index}", response
-          throw Error "index is too large"
-        @fetchFromComingsoon index + 1, results
+          LOGGER.error "[Official] Error in fetch comingsoon: index over #{index}", response
+          throw Error "Index is too large"
+        @_fetchFromComingsoon index + 1, results
       catch error
-        @updateError 'Error in fetchFromComingsoonSuccess', error
+        @updateError '[Official] Error in fetchFromComingsoonSuccess', error
       results = null
+      index = null
       return
 
-  getResultsFromComingsoon: (list, results) ->
+  _getResultsFromComingsoon: (list, results) ->
     for item in list
       ret = {}
       ret.id = 'lv' + item.id
       ret.title = item.title
-      ret.link = BaseLiveData.LIVE_URL + ret.id
+      ret.link = bg.BaseLiveData.LIVE_URL + ret.id
       ret.thumnail = item.picture_url
       ret.description = item.description
       ret.startTime = new Date item.start_date_timestamp_sec * 1000
@@ -1346,44 +1444,58 @@ class Official extends BaseLiveData
   # 2. open/start/end : yes (already end or comming soon)
   #    end : no (on-air)
   #    open : no
-  isCancelFethDetail: (item, now) ->
-    return true if super item, now
+  _isCancelFethDetail: (item, now, ret) ->
+    return true if ret
     if item.startTime
       return true
     return false
 
 
-class History
+bg.History = class History
   @ID: 'history'
   @SAVE_TIMER_SEC: 300
   @MAX_SIZE: 100
-  saveTimer: null
 
+  # === Constructor.
   constructor: (@config) ->
-    unless @config.isNiconamaEnabled History.ID
+    @saveTimer = null
+    unless @config.isNiconamaEnabled bg.History.ID
       @_clearHistory()
 
-  # TODO 履歴が大きくなるようなら、キャッシュを持つようにする
-  # キャッシュがメモリを圧迫する場合があるので、一定時間後に解放するようにする
+  # === Public methods.
+  saveHistory: (data) ->
+    unless @config.isNiconamaEnabled 'history'
+      LOGGER.log '[History] Cancel save history (disable)'
+      return false
+    LOGGER.log "[History] Save history", data
+    console.assert data.id, "[History] id does not exist"
+    hist = @_getHistory()
+    hist[data.id] = data
+    @_removeOldHistory hist
+    @_setHistory hist
+    return true
+
+  getHistories: ->
+    return @_sortHistory @_getHistory()
+
+  # === Helper methods.
   _getHistory: ->
-    hist = localStorage.getItem History.ID
-    LOGGER.log "_getHistory", hist
-    if hist
-      return (JSON.parse hist)
-    else
-      LOGGER.info 'First getting history.'
-      return {}
-    hist = null
-    return
+    # TODO 履歴が大きくなるようなら、キャッシュを持つようにする
+    # キャッシュは一定時間後に解放するようにする
+    hist = localStorage.getItem bg.History.ID
+    LOGGER.info '[History] First getting history.' unless hist
+    LOGGER.log "[History] Get history", hist
+    hist = if hist then JSON.parse hist else {}
+    return hist
 
   _setHistory: (hist) ->
-    localStorage.setItem History.ID, (JSON.stringify hist)
-    LOGGER.log "Saved history"
+    localStorage.setItem bg.History.ID, (JSON.stringify hist)
+    LOGGER.log "[History] Saved history"
     return
 
   _clearHistory: ->
-    LOGGER.info 'Clear history'
-    localStorage.removeItem History.ID
+    LOGGER.info '[History] Clear history'
+    localStorage.removeItem bg.History.ID
     return
 
   _sortHistory: (hist) ->
@@ -1399,38 +1511,24 @@ class History
 
   _removeOldHistory: (hist) ->
     histories = @_sortHistory hist
-    over = histories.length - History.MAX_SIZE
+    over = histories.length - bg.History.MAX_SIZE
     if over <= 0
-      LOGGER.log 'Need not to remove old history'
+      LOGGER.log '[History] Need not to remove old history'
       return
-    for i in [History.MAX_SIZE..(History.MAX_SIZE + over - 1)]
+    for i in [bg.History.MAX_SIZE..(bg.History.MAX_SIZE + over - 1)]
       id = histories[i].id
-      LOGGER.log "Remove history #{id}"
+      LOGGER.log "[History] Remove history #{id}"
       delete hist[id]
-    histories = null
     return
-
-  saveHistory: (data) ->
-    unless @config.isNiconamaEnabled 'history'
-      LOGGER.log 'Cancel save history (disable)'
-      return false
-    LOGGER.log "Save history", data
-    console.assert data.id, "id does not exist"
-    hist = @_getHistory()
-    hist[data.id] = data
-    @_removeOldHistory hist
-    @_setHistory hist
-    hist = null
-    return true
-
-  getHistories: ->
-    return @_sortHistory @_getHistory()
 
 
 ## Main
-exports = exports ? window ? @
-exports.config = new Config
-exports.history = new History config
-exports.bg = new Background config, history
-exports.nicoInfo = new NicoInfo config
-exports.liveChecker = new LiveChecker config, nicoInfo
+exports.config = new bg.Config
+exports.history = new bg.History exports.config
+exports.nicoInfo = new bg.NicoInfo exports.config
+exports.liveChecker = new bg.LiveChecker exports.config, exports.nicoInfo
+
+exports.background = new bg.Background(
+  config: new bg.ConfigCommands exports.config
+  history: new bg.HistoryCommands exports.history
+)

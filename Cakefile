@@ -9,7 +9,7 @@ option '-t', '--target [DIR]', 'Compile target directory.'
 BARE_LIST = [
   'autojump.coffee',
   'background.coffee'
-  'debug.coffee'
+  'common.coffee'
 ]
 
 DEF_TARGET_DIR = 'src/coffee'

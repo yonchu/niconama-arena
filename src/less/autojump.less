@@ -1,4 +1,4 @@
-#auto-jump,#auto-enter {
+#auto-action {
   width: 100%;
   font-size: 120%;
   a {
@@ -39,15 +39,23 @@
   & > div {
     width: 960px;
     margin: auto;
+  }
+}
+
+#auto-action {
+  &.auto-jump-live,&.auto-jump-gate,&.auto-enter {
     padding-bottom: 2px;
   }
 }
 
-#auto-jump {
+#auto-action.auto-jump-live {
   background-color: #141414;
   color: #EEEBEB;
 }
-#auto-jump.auto-jump-gate,#auto-enter {
-  background-color: white;
-  color: black;
+
+#auto-action {
+  &.auto-jump-gate,&.auto-enter {
+    background-color: white;
+    color: black;
+  }
 }
