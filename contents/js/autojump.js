@@ -306,17 +306,17 @@
       'disable': {
         className: 'oepntab-disable',
         msg: '無効',
-        next: 'tempDisable'
+        next: 'enable'
       },
       'tempDisable': {
         className: 'oepntab-tempDisable',
         msg: '一時無効',
-        next: 'enable'
+        next: 'disable'
       },
       'enable': {
         className: 'oepntab-enable',
         msg: '有効',
-        next: 'disable'
+        next: 'tempDisable'
       }
     };
 
