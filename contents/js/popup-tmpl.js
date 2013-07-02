@@ -10,6 +10,8 @@ __p+='<tr>\n  <td>'+
 ((__t=( thumnail ))==null?'':__t)+
 '" /></a></td>\n  <td><p><a href="'+
 ((__t=( link ))==null?'':__t)+
+'" title="'+
+((__t=( title ))==null?'':__t)+
 '">'+
 ((__t=( title ))==null?'':__t)+
 '</a></p></td>\n  <td>'+
@@ -29,6 +31,8 @@ __p+='<li class="'+
 ((__t=( thumnail ))==null?'':__t)+
 '" /></a>\n  </div>\n  <div class="detail">\n    <a href="'+
 ((__t=( link ))==null?'':__t)+
+'" title="'+
+((__t=( title ))==null?'':__t)+
 '" target="_blank">'+
 ((__t=( title ))==null?'':__t)+
 '</a>\n    <p><span>'+
