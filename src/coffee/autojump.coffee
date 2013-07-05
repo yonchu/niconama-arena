@@ -93,7 +93,7 @@ aujmp.AutoAction = class AutoAction
     # === Properties.
     @$el = null
     # Initialize.
-    LOGGER.info 'Start auto action'
+    LOGGER.info '[niconama-arena][AutoAction] Start auto action'
     @init()
 
   # === Initialize.
@@ -131,10 +131,10 @@ aujmp.AutoJump = class AutoJump
     @checkTimer = null
 
     # Initialize.
-    LOGGER.info 'Start auto jump'
+    LOGGER.info '[niconama-arena][AutoJump] Start auto jump'
     error = @validate()
     if error
-      LOGGER.info "Cancel auto jump: ", error
+      LOGGER.info "[niconama-arena][AutoJump] Cancel auto jump: ", error
     else
       @init()
       @initEventListeners()
@@ -166,10 +166,10 @@ aujmp.AutoJump = class AutoJump
   onChangeCheckBox: =>
     @clearCheckTimer()
     if @$checkbox.prop 'checked'
-      LOGGER.info 'Enable auto jump'
+      LOGGER.info '[niconama-arena][AutoJump] Enable auto jump'
       @setUpCheckTimer()
     else
-      LOGGER.info 'Disable auto jump'
+      LOGGER.info '[niconama-arena][AutoJump] Disable auto jump'
     return
 
   # === Methods.
@@ -191,7 +191,7 @@ aujmp.AutoJump = class AutoJump
     else if @livePage.isPageTypeGate()
       @$el.addClass 'auto-jump-gate'
     else
-      LOGGER.error "Unknown page type #{@livePage.pageType}"
+      LOGGER.error "[niconama-arena][AutoJump] Unknown page type #{@livePage.pageType}"
       return @
     @$el.find('div').append aujmp.AutoJump.TPL
     return @
@@ -202,12 +202,12 @@ aujmp.AutoJump = class AutoJump
       return
 
     url = aujmp.AutoJump.LIVE_CHECK_URL + @livePage.liveId
-    LOGGER.info "HTTP Request(checkNextOnair): #{url}"
+    LOGGER.info "[niconama-arena][AutoJump] HTTP Request(checkNextOnair): #{url}"
 
     common.httpRequest url, (response) =>
       $res = $($.parseHTML (common.transIMG response))
       errorcode = $res.find('error code').text()
-      LOGGER.info "errorcode = #{errorcode}"
+      LOGGER.info "[niconama-arena][AutoJump] errorcode = #{errorcode}"
       # full/commingsoon/closed/notfound/timeshift_ticket_exhaust
       if errorcode is 'closed'
         # Off-air
@@ -221,20 +221,20 @@ aujmp.AutoJump = class AutoJump
 
   jumpNextOnair: ->
     url = @livePage.commuUrl
-    LOGGER.info "HTTP Request(jumpNextOnair): #{url}"
+    LOGGER.info "[niconama-arena][AutoJump] HTTP Request(jumpNextOnair): #{url}"
     common.httpRequest url, (response) =>
       $res = $($.parseHTML (common.transIMG response))
 
       nowLiveUrl = $res.find('#now_live a').first().attr 'href'
       unless nowLiveUrl
         # Off-air
-        LOGGER.info 'Off-air'
+        LOGGER.info '[niconama-arena][AutoJump] Off-air'
         return @
 
       # On-air
-      LOGGER.info "On-air: nowLiveUrl = #{nowLiveUrl}"
+      LOGGER.info "[niconama-arena][AutoJump] On-air: nowLiveUrl = #{nowLiveUrl}"
       nowLiveId = nowLiveUrl.match(/watch\/(lv\d+)/)[1]
-      LOGGER.info "nowLiveId = #{nowLiveId}"
+      LOGGER.info "[niconama-arena][AutoJump] nowLiveId = #{nowLiveId}"
       if nowLiveId isnt @livePage.liveId
           # Move to new live page.
           location.replace nowLiveUrl
@@ -266,10 +266,10 @@ aujmp.OpentabStatus = class OpentabStatus
     @$toggleButton = null
 
     # Initialize.
-    LOGGER.info 'Start opentab status'
+    LOGGER.info '[niconama-arena][OpentabStatus] Start opentab status'
     error = @validate()
     if error
-      LOGGER.info "Cancel opentab status: ", error
+      LOGGER.info "[niconama-arena][OpentabStatus] Cancel opentab status: ", error
     else
       @init()
 
@@ -280,7 +280,7 @@ aujmp.OpentabStatus = class OpentabStatus
       return error
     unless @livePage.isJoinCommunity()
       return 'Not joining this community.'
-    LOGGER.info "Joining this community #{@livePage.liveId}"
+    LOGGER.info "[niconama-arena][OpentabStatus] Joining this community #{@livePage.liveId}"
     return
 
   init: ->
@@ -295,7 +295,7 @@ aujmp.OpentabStatus = class OpentabStatus
     else if @livePage.isPageTypeGate()
       @$el.addClass 'auto-jump-gate'
     else
-      LOGGER.error "Unknown page type #{@livePage.pageType}"
+      LOGGER.error "[niconama-arena][OpentabStatus] Unknown page type #{@livePage.pageType}"
       return @
     html = aujmp.OpentabStatus.TPL.replace '%commuId%', @livePage.commuId
     @$el.find('div').append html
@@ -317,7 +317,7 @@ aujmp.OpentabStatus = class OpentabStatus
     return
 
   showOpentabStatus: (status) ->
-    LOGGER.log "Show opentab status: #{status}"
+    LOGGER.log "[niconama-arena][OpentabStatus] Show opentab status: #{status}"
     map = aujmp.OpentabStatus.OPENTAB_STATUS
     msg = map[status].msg
     className = map[status].className
@@ -342,7 +342,7 @@ aujmp.OpentabStatus = class OpentabStatus
         'action' : 'setOpentabStatus',
         'args'   : [@livePage.commuId, status]
       }, (response) =>
-        LOGGER.log 'Saved opentab status', response
+        LOGGER.log '[niconama-arena][OpentabStatus] Saved opentab status', response
         return
     )
     return @
@@ -358,10 +358,10 @@ aujmp.AutoEnter = class AutoEnter
     @$checkbox = null
 
     # Initialize.
-    LOGGER.info 'Start auto enter'
+    LOGGER.info '[niconama-arena][AutoEnter] Start auto enter'
     error = @validate()
     if error
-      LOGGER.info "Cancel auto enter: ", error
+      LOGGER.info "[niconama-arena][AutoEnter] Cancel auto enter: ", error
     else
       @init()
       @initEventListeners()
@@ -388,20 +388,19 @@ aujmp.AutoEnter = class AutoEnter
 
   # === Event listeners.
   initEventListeners: ->
-    console.log 'reg event'
     $('#gates').on 'DOMSubtreeModified', @onDOMSubtreeModifiedGates
     return @
 
   onDOMSubtreeModifiedGates: =>
-    LOGGER.info "Run auto enter: #{new Date()}"
+    LOGGER.info "[niconama-arena][AutoEnter] Run auto enter: #{new Date()}"
     if @$checkbox.prop 'checked'
       if @livePage.isCrowed
-        LOGGER.warn 'Cancel auto enter because this live is crowed.'
+        LOGGER.warn '[niconama-arena][AutoEnter] Cancel auto enter because this live is crowed.'
       else
         # url = @liveCheckUrl + @livePage.liveId
         # common.httpRequest url, (response) =>
         #   # location.reload true
-        #   LOGGER.info 'Request for live check is succescc'
+        #   LOGGER.info '[niconama-arena][AutoEnter] Request for live check is succescc'
         location.reload true
     return
 
@@ -425,10 +424,10 @@ aujmp.History = class History
       accessTime: Date.now()
 
     # Initialize.
-    LOGGER.info 'Start history'
+    LOGGER.info '[niconama-arena][History] Start history'
     error = @validate()
     if error
-      LOGGER.info "Cancel history: ", error
+      LOGGER.info "[niconama-arena][History] Cancel history: ", error
     else
       @init()
 
@@ -448,13 +447,13 @@ aujmp.History = class History
 
     error = @validateData()
     if error
-      LOGGER.error "Data validation error", error, @liveData
+      LOGGER.error "[niconama-arena][History] Data validation error", error, @liveData
       return @
     @saveHistory @liveData
     return @
 
   setLiveDataForGate: ->
-    LOGGER.info "Saving history in gate page: #{@liveData.id}"
+    LOGGER.info "[niconama-arena][History] Saving history in gate page: #{@liveData.id}"
     @liveData.title = $('.infobox h2 > span:first').text().trim()
     @liveData.thumnail = $('#bn_gbox > .bn > meta').attr 'content'
     time = $('#bn_gbox .kaijo').text().trim()
@@ -476,7 +475,7 @@ aujmp.History = class History
     return @
 
   setLiveDataForLive: ->
-    LOGGER.info "Saving history in live page: #{@liveData.id}"
+    LOGGER.info "[niconama-arena][History] Saving history in live page: #{@liveData.id}"
     @liveData.title = $('#watch_title_box .box_inner .title').attr('title').trim()
     @liveData.thumnail = $('#watch_title_box .box_inner img:first').attr 'src'
     time = $('#watch_tab_box .information').first().text().trim().replace(/：/g, ':')
@@ -503,14 +502,14 @@ aujmp.History = class History
     return
 
   saveHistory: ->
-    LOGGER.info "Save history", @liveData
+    LOGGER.info "[niconama-arena][History] Save history", @liveData
     chrome.runtime.sendMessage({
         'target' : 'history',
         'action' : 'saveHistory',
         'args'   : [@liveData]
       }, (response) =>
         res = response.res
-        LOGGER.info "Saved history", res
+        LOGGER.info "[niconama-arena][History] Saved history", res
         return
     )
     return @
@@ -519,14 +518,14 @@ aujmp.History = class History
 # === Initialize ===
 init = ->
   if $('#zero_lead').length
-    LOGGER.info 'No avairable nico_arena on Harajuku.'
+    LOGGER.info '[niconama-arena] No avairable nico_arena on Harajuku.'
     return
 
   # encodeURI(decodeURI(location.href))
   if location.href.match /http[s]?:\/\/live\.nicovideo\.jp\/gate\/.*/
-    LOGGER.info 'This page is for the gate.'
+    LOGGER.info '[niconama-arena] This page is for the gate.'
     if location.href.match /\?.*crowded/
-      LOGGER.info 'This page is now crowed.'
+      LOGGER.info '[niconama-arena] This page is now crowed.'
     else
       watchUrl = location.href.replace /\/gate\//, '/watch/'
       # location.replace watchUrl
@@ -535,7 +534,7 @@ init = ->
   run = (config) ->
     # Analyize this page.
     livePage = new aujmp.LivePage
-    LOGGER.info 'Live page info = ', livePage
+    LOGGER.info '[niconama-arena] Live page info = ', livePage
     # History.
     if config.enableHistory
       HISTORY = new aujmp.History livePage, config
@@ -549,7 +548,7 @@ init = ->
       'args'   : []
     }, (response) ->
       config = response.res
-      LOGGER.info 'Config = ', config
+      LOGGER.info '[niconama-arena] Config = ', config
       run config
       return
   )

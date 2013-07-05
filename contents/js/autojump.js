@@ -124,7 +124,7 @@
       this.livePage = livePage;
       this.config = config;
       this.$el = null;
-      LOGGER.info('Start auto action');
+      LOGGER.info('[niconama-arena][AutoAction] Start auto action');
       this.init();
     }
 
@@ -171,10 +171,10 @@
       this.$checkbox = null;
       this.isCurrentLiveClosed = false;
       this.checkTimer = null;
-      LOGGER.info('Start auto jump');
+      LOGGER.info('[niconama-arena][AutoJump] Start auto jump');
       error = this.validate();
       if (error) {
-        LOGGER.info("Cancel auto jump: ", error);
+        LOGGER.info("[niconama-arena][AutoJump] Cancel auto jump: ", error);
       } else {
         this.init();
         this.initEventListeners();
@@ -210,10 +210,10 @@
     AutoJump.prototype.onChangeCheckBox = function() {
       this.clearCheckTimer();
       if (this.$checkbox.prop('checked')) {
-        LOGGER.info('Enable auto jump');
+        LOGGER.info('[niconama-arena][AutoJump] Enable auto jump');
         this.setUpCheckTimer();
       } else {
-        LOGGER.info('Disable auto jump');
+        LOGGER.info('[niconama-arena][AutoJump] Disable auto jump');
       }
     };
 
@@ -239,7 +239,7 @@
       } else if (this.livePage.isPageTypeGate()) {
         this.$el.addClass('auto-jump-gate');
       } else {
-        LOGGER.error("Unknown page type " + this.livePage.pageType);
+        LOGGER.error("[niconama-arena][AutoJump] Unknown page type " + this.livePage.pageType);
         return this;
       }
       this.$el.find('div').append(aujmp.AutoJump.TPL);
@@ -255,13 +255,13 @@
         return;
       }
       url = aujmp.AutoJump.LIVE_CHECK_URL + this.livePage.liveId;
-      LOGGER.info("HTTP Request(checkNextOnair): " + url);
+      LOGGER.info("[niconama-arena][AutoJump] HTTP Request(checkNextOnair): " + url);
       common.httpRequest(url, function(response) {
         var $res, errorcode;
 
         $res = $($.parseHTML(common.transIMG(response)));
         errorcode = $res.find('error code').text();
-        LOGGER.info("errorcode = " + errorcode);
+        LOGGER.info("[niconama-arena][AutoJump] errorcode = " + errorcode);
         if (errorcode === 'closed') {
           _this.isCurrentLiveClosed = true;
           _this.jumpNextOnair();
@@ -277,19 +277,19 @@
         _this = this;
 
       url = this.livePage.commuUrl;
-      LOGGER.info("HTTP Request(jumpNextOnair): " + url);
+      LOGGER.info("[niconama-arena][AutoJump] HTTP Request(jumpNextOnair): " + url);
       common.httpRequest(url, function(response) {
         var $res, nowLiveId, nowLiveUrl;
 
         $res = $($.parseHTML(common.transIMG(response)));
         nowLiveUrl = $res.find('#now_live a').first().attr('href');
         if (!nowLiveUrl) {
-          LOGGER.info('Off-air');
+          LOGGER.info('[niconama-arena][AutoJump] Off-air');
           return _this;
         }
-        LOGGER.info("On-air: nowLiveUrl = " + nowLiveUrl);
+        LOGGER.info("[niconama-arena][AutoJump] On-air: nowLiveUrl = " + nowLiveUrl);
         nowLiveId = nowLiveUrl.match(/watch\/(lv\d+)/)[1];
-        LOGGER.info("nowLiveId = " + nowLiveId);
+        LOGGER.info("[niconama-arena][AutoJump] nowLiveId = " + nowLiveId);
         if (nowLiveId !== _this.livePage.liveId) {
           location.replace(nowLiveUrl);
         }
@@ -331,10 +331,10 @@
       this.config = config;
       this.onToggleButton = __bind(this.onToggleButton, this);
       this.$toggleButton = null;
-      LOGGER.info('Start opentab status');
+      LOGGER.info('[niconama-arena][OpentabStatus] Start opentab status');
       error = this.validate();
       if (error) {
-        LOGGER.info("Cancel opentab status: ", error);
+        LOGGER.info("[niconama-arena][OpentabStatus] Cancel opentab status: ", error);
       } else {
         this.init();
       }
@@ -350,7 +350,7 @@
       if (!this.livePage.isJoinCommunity()) {
         return 'Not joining this community.';
       }
-      LOGGER.info("Joining this community " + this.livePage.liveId);
+      LOGGER.info("[niconama-arena][OpentabStatus] Joining this community " + this.livePage.liveId);
     };
 
     OpentabStatus.prototype.init = function() {
@@ -366,7 +366,7 @@
       } else if (this.livePage.isPageTypeGate()) {
         this.$el.addClass('auto-jump-gate');
       } else {
-        LOGGER.error("Unknown page type " + this.livePage.pageType);
+        LOGGER.error("[niconama-arena][OpentabStatus] Unknown page type " + this.livePage.pageType);
         return this;
       }
       html = aujmp.OpentabStatus.TPL.replace('%commuId%', this.livePage.commuId);
@@ -395,7 +395,7 @@
     OpentabStatus.prototype.showOpentabStatus = function(status) {
       var className, map, msg;
 
-      LOGGER.log("Show opentab status: " + status);
+      LOGGER.log("[niconama-arena][OpentabStatus] Show opentab status: " + status);
       map = aujmp.OpentabStatus.OPENTAB_STATUS;
       msg = map[status].msg;
       className = map[status].className;
@@ -429,7 +429,7 @@
         'action': 'setOpentabStatus',
         'args': [this.livePage.commuId, status]
       }, function(response) {
-        LOGGER.log('Saved opentab status', response);
+        LOGGER.log('[niconama-arena][OpentabStatus] Saved opentab status', response);
       });
       return this;
     };
@@ -449,10 +449,10 @@
       this.config = config;
       this.onDOMSubtreeModifiedGates = __bind(this.onDOMSubtreeModifiedGates, this);
       this.$checkbox = null;
-      LOGGER.info('Start auto enter');
+      LOGGER.info('[niconama-arena][AutoEnter] Start auto enter');
       error = this.validate();
       if (error) {
-        LOGGER.info("Cancel auto enter: ", error);
+        LOGGER.info("[niconama-arena][AutoEnter] Cancel auto enter: ", error);
       } else {
         this.init();
         this.initEventListeners();
@@ -484,16 +484,15 @@
     };
 
     AutoEnter.prototype.initEventListeners = function() {
-      console.log('reg event');
       $('#gates').on('DOMSubtreeModified', this.onDOMSubtreeModifiedGates);
       return this;
     };
 
     AutoEnter.prototype.onDOMSubtreeModifiedGates = function() {
-      LOGGER.info("Run auto enter: " + (new Date()));
+      LOGGER.info("[niconama-arena][AutoEnter] Run auto enter: " + (new Date()));
       if (this.$checkbox.prop('checked')) {
         if (this.livePage.isCrowed) {
-          LOGGER.warn('Cancel auto enter because this live is crowed.');
+          LOGGER.warn('[niconama-arena][AutoEnter] Cancel auto enter because this live is crowed.');
         } else {
           location.reload(true);
         }
@@ -523,10 +522,10 @@
         endTimd: null,
         accessTime: Date.now()
       };
-      LOGGER.info('Start history');
+      LOGGER.info('[niconama-arena][History] Start history');
       error = this.validate();
       if (error) {
-        LOGGER.info("Cancel history: ", error);
+        LOGGER.info("[niconama-arena][History] Cancel history: ", error);
       } else {
         this.init();
       }
@@ -550,7 +549,7 @@
       }
       error = this.validateData();
       if (error) {
-        LOGGER.error("Data validation error", error, this.liveData);
+        LOGGER.error("[niconama-arena][History] Data validation error", error, this.liveData);
         return this;
       }
       this.saveHistory(this.liveData);
@@ -560,7 +559,7 @@
     History.prototype.setLiveDataForGate = function() {
       var dateStr, endDateStr, endTimeMatch, endTimeStr, endYearStr, openTimeStr, startTimeStr, time, timeMatch, yearStr;
 
-      LOGGER.info("Saving history in gate page: " + this.liveData.id);
+      LOGGER.info("[niconama-arena][History] Saving history in gate page: " + this.liveData.id);
       this.liveData.title = $('.infobox h2 > span:first').text().trim();
       this.liveData.thumnail = $('#bn_gbox > .bn > meta').attr('content');
       time = $('#bn_gbox .kaijo').text().trim();
@@ -586,7 +585,7 @@
     History.prototype.setLiveDataForLive = function() {
       var dateStr, openTimeStr, startTimeStr, time, timeMatch, yearStr;
 
-      LOGGER.info("Saving history in live page: " + this.liveData.id);
+      LOGGER.info("[niconama-arena][History] Saving history in live page: " + this.liveData.id);
       this.liveData.title = $('#watch_title_box .box_inner .title').attr('title').trim();
       this.liveData.thumnail = $('#watch_title_box .box_inner img:first').attr('src');
       time = $('#watch_tab_box .information').first().text().trim().replace(/：/g, ':');
@@ -623,7 +622,7 @@
     History.prototype.saveHistory = function() {
       var _this = this;
 
-      LOGGER.info("Save history", this.liveData);
+      LOGGER.info("[niconama-arena][History] Save history", this.liveData);
       chrome.runtime.sendMessage({
         'target': 'history',
         'action': 'saveHistory',
@@ -632,7 +631,7 @@
         var res;
 
         res = response.res;
-        LOGGER.info("Saved history", res);
+        LOGGER.info("[niconama-arena][History] Saved history", res);
       });
       return this;
     };
@@ -645,13 +644,13 @@
     var run, watchUrl;
 
     if ($('#zero_lead').length) {
-      LOGGER.info('No avairable nico_arena on Harajuku.');
+      LOGGER.info('[niconama-arena] No avairable nico_arena on Harajuku.');
       return;
     }
     if (location.href.match(/http[s]?:\/\/live\.nicovideo\.jp\/gate\/.*/)) {
-      LOGGER.info('This page is for the gate.');
+      LOGGER.info('[niconama-arena] This page is for the gate.');
       if (location.href.match(/\?.*crowded/)) {
-        LOGGER.info('This page is now crowed.');
+        LOGGER.info('[niconama-arena] This page is now crowed.');
       } else {
         watchUrl = location.href.replace(/\/gate\//, '/watch/');
         return;
@@ -661,7 +660,7 @@
       var AUTO_ACTION, HISTORY, livePage;
 
       livePage = new aujmp.LivePage;
-      LOGGER.info('Live page info = ', livePage);
+      LOGGER.info('[niconama-arena] Live page info = ', livePage);
       if (config.enableHistory) {
         HISTORY = new aujmp.History(livePage, config);
       }
@@ -675,7 +674,7 @@
       var config;
 
       config = response.res;
-      LOGGER.info('Config = ', config);
+      LOGGER.info('[niconama-arena] Config = ', config);
       run(config);
     });
   };
