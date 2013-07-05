@@ -149,11 +149,11 @@ aujmp.AutoJump = class AutoJump
 
   init: ->
     @render()
-    @$checkbox = @$el.find('input:checkbox')
+    @$checkbox = @$el.find('input:checkbox[name="auto-jump"]')
 
     # Check next on-air.
     if @config.enableAutoJump
-      @$checkbox.attr 'checked', true
+      @$checkbox.prop 'checked', true
       @checkNextOnair()
       @setUpCheckTimer()
     return @
@@ -165,8 +165,11 @@ aujmp.AutoJump = class AutoJump
 
   onChangeCheckBox: =>
     @clearCheckTimer()
-    if @$checkbox.attr 'checked'
+    if @$checkbox.prop 'checked'
+      LOGGER.info 'Enable auto jump'
       @setUpCheckTimer()
+    else
+      LOGGER.info 'Disable auto jump'
     return
 
   # === Methods.
@@ -212,7 +215,7 @@ aujmp.AutoJump = class AutoJump
         @jumpNextOnair()
       else if errorcode in ['notfound', 'timeshift_ticket_exhaust']
         @clearCheckTimer()
-        @$checkbox.attr 'checked', false
+        @$checkbox.prop 'checked', false
       return
     return
 
@@ -378,19 +381,20 @@ aujmp.AutoEnter = class AutoEnter
   render: ->
     @$el.addClass 'auto-enter'
     @$el.find('div').append aujmp.AutoEnter.TPL
-    @$checkbox = @$el.find('input:checkbox')
+    @$checkbox = @$el.find('input:checkbox[name=auto-enter]')
     if @config.enableAutoEnter
-      @$checkbox.attr 'checked', true
+      @$checkbox.prop 'checked', true
     return @
 
   # === Event listeners.
   initEventListeners: ->
+    console.log 'reg event'
     $('#gates').on 'DOMSubtreeModified', @onDOMSubtreeModifiedGates
     return @
 
   onDOMSubtreeModifiedGates: =>
     LOGGER.info "Run auto enter: #{new Date()}"
-    if @$checkbox.attr 'checked'
+    if @$checkbox.prop 'checked'
       if @livePage.isCrowed
         LOGGER.warn 'Cancel auto enter because this live is crowed.'
       else

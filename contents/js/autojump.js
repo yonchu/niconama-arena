@@ -193,9 +193,9 @@
 
     AutoJump.prototype.init = function() {
       this.render();
-      this.$checkbox = this.$el.find('input:checkbox');
+      this.$checkbox = this.$el.find('input:checkbox[name="auto-jump"]');
       if (this.config.enableAutoJump) {
-        this.$checkbox.attr('checked', true);
+        this.$checkbox.prop('checked', true);
         this.checkNextOnair();
         this.setUpCheckTimer();
       }
@@ -209,8 +209,11 @@
 
     AutoJump.prototype.onChangeCheckBox = function() {
       this.clearCheckTimer();
-      if (this.$checkbox.attr('checked')) {
+      if (this.$checkbox.prop('checked')) {
+        LOGGER.info('Enable auto jump');
         this.setUpCheckTimer();
+      } else {
+        LOGGER.info('Disable auto jump');
       }
     };
 
@@ -264,7 +267,7 @@
           _this.jumpNextOnair();
         } else if (errorcode === 'notfound' || errorcode === 'timeshift_ticket_exhaust') {
           _this.clearCheckTimer();
-          _this.$checkbox.attr('checked', false);
+          _this.$checkbox.prop('checked', false);
         }
       });
     };
@@ -473,21 +476,22 @@
     AutoEnter.prototype.render = function() {
       this.$el.addClass('auto-enter');
       this.$el.find('div').append(aujmp.AutoEnter.TPL);
-      this.$checkbox = this.$el.find('input:checkbox');
+      this.$checkbox = this.$el.find('input:checkbox[name=auto-enter]');
       if (this.config.enableAutoEnter) {
-        this.$checkbox.attr('checked', true);
+        this.$checkbox.prop('checked', true);
       }
       return this;
     };
 
     AutoEnter.prototype.initEventListeners = function() {
+      console.log('reg event');
       $('#gates').on('DOMSubtreeModified', this.onDOMSubtreeModifiedGates);
       return this;
     };
 
     AutoEnter.prototype.onDOMSubtreeModifiedGates = function() {
       LOGGER.info("Run auto enter: " + (new Date()));
-      if (this.$checkbox.attr('checked')) {
+      if (this.$checkbox.prop('checked')) {
         if (this.livePage.isCrowed) {
           LOGGER.warn('Cancel auto enter because this live is crowed.');
         } else {
