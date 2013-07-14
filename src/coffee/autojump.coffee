@@ -34,6 +34,8 @@ aujmp.LivePage = class LivePage
       if commuUrl
         # Live page.
         @pageType = 'live'
+      else if $('#gates').length
+        @pageType = 'gate-valid'
     return commuUrl
 
   getCommuIdFromUrl: (url) ->
@@ -443,8 +445,8 @@ aujmp.History = class History
     else if @livePage.isPageTypeLive()
       @setLiveDataForLive()
     else
-      throw Error "Unknow page type #{@livePage.pageType}"
-
+      LOGGER.error "Unknown page type: #{@livePage.pageType}"
+      return @
     error = @validateData()
     if error
       LOGGER.error "[niconama-arena][History] Data validation error", error, @liveData

@@ -36,6 +36,8 @@
         commuUrl = $('#watch_title_box > div > a').prop('href');
         if (commuUrl) {
           this.pageType = 'live';
+        } else if ($('#gates').length) {
+          this.pageType = 'gate-valid';
         }
       }
       return commuUrl;
@@ -545,7 +547,8 @@
       } else if (this.livePage.isPageTypeLive()) {
         this.setLiveDataForLive();
       } else {
-        throw Error("Unknow page type " + this.livePage.pageType);
+        LOGGER.error("Unknown page type: " + this.livePage.pageType);
+        return this;
       }
       error = this.validateData();
       if (error) {
