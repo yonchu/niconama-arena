@@ -251,3 +251,38 @@ do (exports=@) ->
 
   common.changeGate2Watch = (url) ->
     return url.replace(/\?.*/, '').replace /\/gate\//, '/watch/'
+
+
+  common.notification = {}
+
+  common.notification.timeMsg = (openTime, startTime) ->
+    ret = {}
+    openTimeStr = common.date2String openTime if openTime
+    startTimeStr = common.date2String startTime if startTime
+    if openTimeStr
+      ret.openTime = "開場: #{openTimeStr}"
+      ret.startTime = "開演: #{startTimeStr}"
+    else if startTimeStr
+      ret.startTime = "開始: #{startTimeStr}"
+    return ret
+
+  common.notification.statusMsg = (openTime, startTime, endTime, now, beforeTimeSec=300) ->
+    ret = {}
+    openTime = openTime?.getTime()
+    startTime = startTime?.getTime()
+    endTime = endTime?.getTime()
+    if endTime and now > endTime
+      # closed
+      ret.text = '放送は終了しました'
+      ret.flag = 'closed'
+    else if startTime
+      if now > startTime
+        # on-air
+        ret.text = 'ただいま放送中'
+      else if openTime and now > openTime
+        # open gate
+        ret.text = 'まもなく放送開始'
+      else if openTime and now > openTime - beforeTimeSec * 1000
+        # before open gate
+        ret.text = 'まもなく開場'
+    return ret

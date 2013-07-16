@@ -8,8 +8,6 @@ ntf = exports.namespace 'CHEX.ntf'
 
 
 ntf.Notification = class Notification
-  @BEFORE_TIME_SEC: 300
-
   constructor: ->
     @liveChecker = chrome.extension.getBackgroundPage().liveChecker
     $ =>
@@ -44,44 +42,20 @@ ntf.Notification = class Notification
     return
 
   setTime: (openTime, startTime) ->
-    text = null
-    openTimeStr = common.date2String openTime if openTime
-    startTimeStr = common.date2String startTime if startTime
-    if openTimeStr
-      text = "開場: #{openTimeStr}"
-      $('#open-time').html text
-      text = "開演: #{startTimeStr}"
-      $('#start-time').html text
-    else if startTimeStr
-      text = "開始: #{startTimeStr}"
-      $('#start-time').html text
+    msg = common.notification.timeMsg openTime, startTime
+    if msg.openTime
+      $('#open-time').html msg.openTime
+    if msg.startTime
+      $('#start-time').html msg.startTime
     return
 
   setStatus: (openTime, startTime, endTime, now) ->
-    text = null
-    flag = null
-    openTime = openTime?.getTime()
-    startTime = startTime?.getTime()
-    endTime = endTime?.getTime()
-    if endTime and now > endTime
-      # closed
-      text = '放送は終了しました'
-      flag = 'closed'
-    else if startTime
-      if now > startTime
-        # on-air
-        text = 'ただいま放送中'
-      else if openTime and now > openTime
-        # open gate
-        text = 'まもなく放送開始'
-      else if openTime and now > openTime - ntf.Notification.BEFORE_TIME_SEC * 1000
-        # before open gate
-        text = 'まもなく開場'
+    msg = common.notification.statusMsg openTime, startTime, endTime, now
     # Set status.
-    if text
-      $('#status').text text
-    if flag
-      $('#status').addClass flag
+    if msg.text
+      $('#status').text msg.text
+    if msg.flag
+      $('#status').addClass msg.flag
     return
 
 

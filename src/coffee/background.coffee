@@ -600,6 +600,7 @@ bg.OpenTab = class OpenTab
 
 bg.Notification = class Notification
   @NOTIFICATION_TIMEOUT_SEC: 3.5
+  @NOTIFICATION_NEW_VER_TIMEOUT_SEC: 4
   # @NOTIFICATION_URL: "chrome-extension://#{location.host}/html/notification.html#"
   @NOTIFICATION_URL: (chrome.extension.getURL 'html/notification.html') + '#'
 
@@ -611,20 +612,37 @@ bg.Notification = class Notification
     @targets = null
     @index = 0
     @ntf = null
+    @ntfId = null
     @cancelTimer = null
-    @defer = null
+    @isSupportedWebkitNotifications = null
+    if exports.webkitNotifications?.createHTMLNotification
+      # Old webkitnotifications.
+      LOGGER.info '[Notification] Notifications (webkitNotifications) are supported!'
+      @isSupportedWebkitNotifications = true
+    else if chrome.notifications
+      # New chrome.notifications
+      LOGGER.info '[Notification] Notifications (chrome.notifications) are supported!'
+      @isSupportedWebkitNotifications = false
+      # onClosed
+      chrome.notifications.onClosed.addListener @_onClosedNotificationNewVer
+      # onClicked
+      chrome.notifications.onClicked.addListener @_onClickedNotificationNewVer
+    else
+      LOGGER.error '[Notification] Notifications are not supported for this Browser/OS version.'
 
   # === Public methods.
   run: ->
     LOGGER.log '[Notification] Start notification process.'
     try
       @defer = $.Deferred()
+      unless @isSupportedWebkitNotifications?
+        throw Error "Notifications are not supported."
       @_makeTargets()
-      @_notifyWithHtml()
+      @_notify()
     catch error
       @targets = null
       @defer.reject()
-      throw error
+      LOGGER.error '[Notification] error in run.', error
     return @defer.promise()
 
   getTargets: (index) ->
@@ -678,13 +696,85 @@ bg.Notification = class Notification
       LOGGER.log @targets
     return
 
-  _notifyWithHtml: ->
+  _notify: ->
     if not @targets or @index >= @targets.length
       LOGGER.log '[Notification] End notification process.'
       t = @targets
       @_clean()
       @defer.resolve t
       return
+    if @isSupportedWebkitNotifications
+      @_notifyWithHtml()
+    else
+      @_notifyNewVersion()
+    return
+
+  ## Notification for new version.
+  _notifyNewVersion: ->
+    target = @targets[@index]
+    # Creaate message.
+    message = @_createMessageForNewVer target
+    opt =
+      type: 'basic'
+      title: target.title
+      message: message
+      iconUrl: target.thumnail
+    chrome.notifications.create '', opt, @_onCreateNotificationNewVer
+    return
+
+  _onCreateNotificationNewVer: (notificationId) =>
+    unless notificationId
+      LOGGER.error "[Notification] Notification create error (notificationId is null)", @targets[@index]
+      @_onClosedNotificationNewVer()
+      return
+    @ntfId = notificationId
+    @cancelTimer = setTimeout(=>
+      @cancelTimer = null
+      chrome.notifications.clear notificationId, (wasCleared) =>
+        unless wasCleared
+          LOGGER.error "[Notification] Notification clear failed (wasCleared is false)", @targets[@index]
+        return
+      notificationId = null
+      return
+    , bg.Notification.NOTIFICATION_NEW_VER_TIMEOUT_SEC * 1000)
+    return
+
+  _onClosedNotificationNewVer: (notificationId, byUser) =>
+    if @cancelTimer
+      clearTimeout @cancelTimer
+      @cancelTimer = null
+    @index += 1
+    @_notify()
+    return
+
+  _onClickedNotificationNewVer: (notificationId) =>
+    chrome.tabs.create(
+      url: @targets[@index].link
+      active: true
+    )
+    return
+
+  _createMessageForNewVer: (target) ->
+    msg = ''
+    now = Date.now()
+    @setStatus
+    timeMsg = common.notification.timeMsg target.openTime, target.startTime
+    if timeMsg.openTime
+      msg += timeMsg.openTime
+      if timeMsg.startTime
+        msg += '  '
+    if timeMsg.startTime
+      msg += timeMsg.startTime
+    msg += '\n'
+    statusMsg = common.notification.statusMsg(
+      target.openTime, target.startTime, target.endTime, now
+    )
+    if statusMsg.text
+      msg += statusMsg.text
+    return msg
+
+  ## Notification for webkit HTML notification.
+  _notifyWithHtml: ->
     url = bg.Notification.NOTIFICATION_URL + @index
     LOGGER.log "[Notification] Notify(html) #{url}\n", @targets[@index]
     @ntf = webkitNotifications.createHTMLNotification url
@@ -709,7 +799,7 @@ bg.Notification = class Notification
       clearTimeout @cancelTimer
       @cancelTimer = null
     @index += 1
-    @_notifyWithHtml()
+    @_notify()
     return
 
   _onerrorNotification: (event) =>
@@ -719,7 +809,7 @@ bg.Notification = class Notification
     @defer.reject t
     return
 
-  _notify: (id, iconUrl, title, msg)->
+  _notifySimply: (id, iconUrl, title, msg)->
     LOGGER.log "[Notification] Notify #{id}\n[#{title}] #{msg}\n#{iconUrl}"
     webkitNotifications.createNotification(iconUrl, title, msg).show()
     return
@@ -728,6 +818,7 @@ bg.Notification = class Notification
     @targets = null
     @index = 0
     @ntf = null
+    @ntfId = null
     @cancelTimer = null
     return
 
@@ -928,7 +1019,7 @@ bg.DetailFetcher = class DetailFetcher
       @_fetchDetail()
     catch error
       @defer.reject()
-      throw error
+      LOGGER.error "[DetailFetcher][#{@id}] error in fetch.", error
     return @defer.promise()
 
   _fetchDetail: ->

@@ -345,7 +345,50 @@ this.exports = (_ref = typeof exports !== "undefined" && exports !== null ? expo
 
     return (_ref1 = url.match(/(watch|gate)\/(lv\d+)/)) != null ? _ref1[2] : void 0;
   };
-  return common.changeGate2Watch = function(url) {
+  common.changeGate2Watch = function(url) {
     return url.replace(/\?.*/, '').replace(/\/gate\//, '/watch/');
+  };
+  common.notification = {};
+  common.notification.timeMsg = function(openTime, startTime) {
+    var openTimeStr, ret, startTimeStr;
+
+    ret = {};
+    if (openTime) {
+      openTimeStr = common.date2String(openTime);
+    }
+    if (startTime) {
+      startTimeStr = common.date2String(startTime);
+    }
+    if (openTimeStr) {
+      ret.openTime = "開場: " + openTimeStr;
+      ret.startTime = "開演: " + startTimeStr;
+    } else if (startTimeStr) {
+      ret.startTime = "開始: " + startTimeStr;
+    }
+    return ret;
+  };
+  return common.notification.statusMsg = function(openTime, startTime, endTime, now, beforeTimeSec) {
+    var ret;
+
+    if (beforeTimeSec == null) {
+      beforeTimeSec = 300;
+    }
+    ret = {};
+    openTime = openTime != null ? openTime.getTime() : void 0;
+    startTime = startTime != null ? startTime.getTime() : void 0;
+    endTime = endTime != null ? endTime.getTime() : void 0;
+    if (endTime && now > endTime) {
+      ret.text = '放送は終了しました';
+      ret.flag = 'closed';
+    } else if (startTime) {
+      if (now > startTime) {
+        ret.text = 'ただいま放送中';
+      } else if (openTime && now > openTime) {
+        ret.text = 'まもなく放送開始';
+      } else if (openTime && now > openTime - beforeTimeSec * 1000) {
+        ret.text = 'まもなく開場';
+      }
+    }
+    return ret;
   };
 })(this);

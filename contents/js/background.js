@@ -838,20 +838,39 @@
   bg.Notification = Notification = (function() {
     Notification.NOTIFICATION_TIMEOUT_SEC = 3.5;
 
+    Notification.NOTIFICATION_NEW_VER_TIMEOUT_SEC = 4;
+
     Notification.NOTIFICATION_URL = (chrome.extension.getURL('html/notification.html')) + '#';
 
     function Notification(config, nicoInfo) {
+      var _ref1;
+
       this.config = config;
       this.nicoInfo = nicoInfo;
       this._onerrorNotification = __bind(this._onerrorNotification, this);
       this._oncloseNotification = __bind(this._oncloseNotification, this);
       this._ondisplayNotification = __bind(this._ondisplayNotification, this);
+      this._onClickedNotificationNewVer = __bind(this._onClickedNotificationNewVer, this);
+      this._onClosedNotificationNewVer = __bind(this._onClosedNotificationNewVer, this);
+      this._onCreateNotificationNewVer = __bind(this._onCreateNotificationNewVer, this);
       this.history = {};
       this.targets = null;
       this.index = 0;
       this.ntf = null;
+      this.ntfId = null;
       this.cancelTimer = null;
-      this.defer = null;
+      this.isSupportedWebkitNotifications = null;
+      if ((_ref1 = exports.webkitNotifications) != null ? _ref1.createHTMLNotification : void 0) {
+        LOGGER.info('[Notification] Notifications (webkitNotifications) are supported!');
+        this.isSupportedWebkitNotifications = true;
+      } else if (chrome.notifications) {
+        LOGGER.info('[Notification] Notifications (chrome.notifications) are supported!');
+        this.isSupportedWebkitNotifications = false;
+        chrome.notifications.onClosed.addListener(this._onClosedNotificationNewVer);
+        chrome.notifications.onClicked.addListener(this._onClickedNotificationNewVer);
+      } else {
+        LOGGER.error('[Notification] Notifications are not supported for this Browser/OS version.');
+      }
     }
 
     Notification.prototype.run = function() {
@@ -860,13 +879,16 @@
       LOGGER.log('[Notification] Start notification process.');
       try {
         this.defer = $.Deferred();
+        if (this.isSupportedWebkitNotifications == null) {
+          throw Error("Notifications are not supported.");
+        }
         this._makeTargets();
-        this._notifyWithHtml();
+        this._notify();
       } catch (_error) {
         error = _error;
         this.targets = null;
         this.defer.reject();
-        throw error;
+        LOGGER.error('[Notification] error in run.', error);
       }
       return this.defer.promise();
     };
@@ -945,8 +967,8 @@
       }
     };
 
-    Notification.prototype._notifyWithHtml = function() {
-      var t, url;
+    Notification.prototype._notify = function() {
+      var t;
 
       if (!this.targets || this.index >= this.targets.length) {
         LOGGER.log('[Notification] End notification process.');
@@ -955,6 +977,90 @@
         this.defer.resolve(t);
         return;
       }
+      if (this.isSupportedWebkitNotifications) {
+        this._notifyWithHtml();
+      } else {
+        this._notifyNewVersion();
+      }
+    };
+
+    Notification.prototype._notifyNewVersion = function() {
+      var message, opt, target;
+
+      target = this.targets[this.index];
+      message = this._createMessageForNewVer(target);
+      opt = {
+        type: 'basic',
+        title: target.title,
+        message: message,
+        iconUrl: target.thumnail
+      };
+      chrome.notifications.create('', opt, this._onCreateNotificationNewVer);
+    };
+
+    Notification.prototype._onCreateNotificationNewVer = function(notificationId) {
+      var _this = this;
+
+      if (!notificationId) {
+        LOGGER.error("[Notification] Notification create error (notificationId is null)", this.targets[this.index]);
+        this._onClosedNotificationNewVer();
+        return;
+      }
+      this.ntfId = notificationId;
+      this.cancelTimer = setTimeout(function() {
+        _this.cancelTimer = null;
+        chrome.notifications.clear(notificationId, function(wasCleared) {
+          if (!wasCleared) {
+            LOGGER.error("[Notification] Notification clear failed (wasCleared is false)", _this.targets[_this.index]);
+          }
+        });
+        notificationId = null;
+      }, bg.Notification.NOTIFICATION_NEW_VER_TIMEOUT_SEC * 1000);
+    };
+
+    Notification.prototype._onClosedNotificationNewVer = function(notificationId, byUser) {
+      if (this.cancelTimer) {
+        clearTimeout(this.cancelTimer);
+        this.cancelTimer = null;
+      }
+      this.index += 1;
+      this._notify();
+    };
+
+    Notification.prototype._onClickedNotificationNewVer = function(notificationId) {
+      chrome.tabs.create({
+        url: this.targets[this.index].link,
+        active: true
+      });
+    };
+
+    Notification.prototype._createMessageForNewVer = function(target) {
+      var msg, now, statusMsg, timeMsg;
+
+      msg = '';
+      now = Date.now();
+      this.setStatus;
+      timeMsg = common.notification.timeMsg(target.openTime, target.startTime);
+      if (timeMsg.openTime) {
+        msg += timeMsg.openTime;
+        if (timeMsg.startTime) {
+          msg += '  ';
+        }
+      }
+      if (timeMsg.startTime) {
+        msg += timeMsg.startTime;
+      }
+      msg += '\n';
+      statusMsg = common.notification.statusMsg(target.openTime, target.startTime, target.endTime, now);
+      if (statusMsg.text) {
+        msg += statusMsg.text;
+      }
+      return msg;
+    };
+
+    Notification.prototype._notifyWithHtml = function() {
+      var url;
+
       url = bg.Notification.NOTIFICATION_URL + this.index;
       LOGGER.log("[Notification] Notify(html) " + url + "\n", this.targets[this.index]);
       this.ntf = webkitNotifications.createHTMLNotification(url);
@@ -982,7 +1088,7 @@
         this.cancelTimer = null;
       }
       this.index += 1;
-      this._notifyWithHtml();
+      this._notify();
     };
 
     Notification.prototype._onerrorNotification = function(event) {
@@ -994,7 +1100,7 @@
       this.defer.reject(t);
     };
 
-    Notification.prototype._notify = function(id, iconUrl, title, msg) {
+    Notification.prototype._notifySimply = function(id, iconUrl, title, msg) {
       LOGGER.log("[Notification] Notify " + id + "\n[" + title + "] " + msg + "\n" + iconUrl);
       webkitNotifications.createNotification(iconUrl, title, msg).show();
     };
@@ -1003,6 +1109,7 @@
       this.targets = null;
       this.index = 0;
       this.ntf = null;
+      this.ntfId = null;
       this.cancelTimer = null;
     };
 
@@ -1290,7 +1397,7 @@
       } catch (_error) {
         error = _error;
         this.defer.reject();
-        throw error;
+        LOGGER.error("[DetailFetcher][" + this.id + "] error in fetch.", error);
       }
       return this.defer.promise();
     };

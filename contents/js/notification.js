@@ -11,8 +11,6 @@
   ntf = exports.namespace('CHEX.ntf');
 
   ntf.Notification = Notification = (function() {
-    Notification.BEFORE_TIME_SEC = 300;
-
     function Notification() {
       var _this = this;
 
@@ -52,51 +50,26 @@
     };
 
     Notification.prototype.setTime = function(openTime, startTime) {
-      var openTimeStr, startTimeStr, text;
+      var msg;
 
-      text = null;
-      if (openTime) {
-        openTimeStr = common.date2String(openTime);
+      msg = common.notification.timeMsg(openTime, startTime);
+      if (msg.openTime) {
+        $('#open-time').html(msg.openTime);
       }
-      if (startTime) {
-        startTimeStr = common.date2String(startTime);
-      }
-      if (openTimeStr) {
-        text = "開場: " + openTimeStr;
-        $('#open-time').html(text);
-        text = "開演: " + startTimeStr;
-        $('#start-time').html(text);
-      } else if (startTimeStr) {
-        text = "開始: " + startTimeStr;
-        $('#start-time').html(text);
+      if (msg.startTime) {
+        $('#start-time').html(msg.startTime);
       }
     };
 
     Notification.prototype.setStatus = function(openTime, startTime, endTime, now) {
-      var flag, text;
+      var msg;
 
-      text = null;
-      flag = null;
-      openTime = openTime != null ? openTime.getTime() : void 0;
-      startTime = startTime != null ? startTime.getTime() : void 0;
-      endTime = endTime != null ? endTime.getTime() : void 0;
-      if (endTime && now > endTime) {
-        text = '放送は終了しました';
-        flag = 'closed';
-      } else if (startTime) {
-        if (now > startTime) {
-          text = 'ただいま放送中';
-        } else if (openTime && now > openTime) {
-          text = 'まもなく放送開始';
-        } else if (openTime && now > openTime - ntf.Notification.BEFORE_TIME_SEC * 1000) {
-          text = 'まもなく開場';
-        }
+      msg = common.notification.statusMsg(openTime, startTime, endTime, now);
+      if (msg.text) {
+        $('#status').text(msg.text);
       }
-      if (text) {
-        $('#status').text(text);
-      }
-      if (flag) {
-        $('#status').addClass(flag);
+      if (msg.flag) {
+        $('#status').addClass(msg.flag);
       }
     };
 
