@@ -733,7 +733,9 @@
       this.$settingBadge = $('#setting-badge select');
       this.$settingNotification = $('#setting-notification select');
       this.$settingOpentabSelect = $('#setting-opentab select');
-      this.$settingOpentabBlacklist = $('#setting-opentab input:text');
+      this.$settingOpentabRule = $('#setting-opentab-rule input:radio[name="rule"]');
+      this.$settingOpentabBlacklist = $('#setting-opentab-rule input:text:eq(0)');
+      this.$settingOpentabWhitelist = $('#setting-opentab-rule input:text:eq(1)');
     }
 
     SettingsTab.prototype.initEventListeners = function() {
@@ -797,7 +799,7 @@
     };
 
     SettingsTab.prototype.saveSettings = function() {
-      var blacklist, checkbox, checkboxes, name, select, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref1, _ref2, _ref3;
+      var blacklist, checkbox, checkboxes, name, rule, select, value, whitelist, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref1, _ref2, _ref3;
 
       this.config.setEnableAutoJump(this.$autoJumpCheckbox.prop('checked'));
       this.config.setAutoJumpIntervalSec(this.$autoJumpIntervalInput.val());
@@ -831,17 +833,26 @@
         value = select.value;
         this.config.setOpentabEnable(name, value);
       }
-      blacklist = this.$settingOpentabBlacklist.val();
-      if (blacklist) {
-        blacklist = blacklist.replace(/\ /g, '').split(',');
-      } else {
-        blacklist = [];
-      }
+      rule = this.$settingOpentabRule.filter(':checked').val();
+      blacklist = this.getRuleList(this.$settingOpentabBlacklist.val());
+      whitelist = this.getRuleList(this.$settingOpentabWhitelist.val());
+      this.config.setRule(rule);
       this.config.setBlackList(blacklist);
+      this.config.setWhiteList(whitelist);
+    };
+
+    SettingsTab.prototype.getRuleList = function(ruleList) {
+      var ret;
+
+      ret = [];
+      if (ruleList) {
+        ret = ruleList.replace(/\ /g, '').split(',');
+      }
+      return ret;
     };
 
     SettingsTab.prototype.restoreSettings = function() {
-      var blacklist, checkbox, checkboxes, name, select, value, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref1, _ref2, _ref3;
+      var blacklist, checkbox, checkboxes, name, select, value, whitelist, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref1, _ref2, _ref3;
 
       this.$autoJumpCheckbox.prop('checked', this.config.getEnableAutoJump());
       this.$autoJumpIntervalInput.val(this.config.getAutoJumpIntervalSec());
@@ -875,8 +886,15 @@
         value = this.config.getOpentabEnable(name);
         select.value = value;
       }
+      if (this.config.isRuleBlackList()) {
+        this.$settingOpentabRule.eq(0).prop('checked', true);
+      } else {
+        this.$settingOpentabRule.eq(1).prop('checked', true);
+      }
       blacklist = this.config.getBlackList();
+      whitelist = this.config.getWhiteList();
       this.$settingOpentabBlacklist.val(blacklist.join(','));
+      this.$settingOpentabWhitelist.val(whitelist.join(','));
     };
 
     return SettingsTab;

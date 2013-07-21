@@ -395,8 +395,30 @@
       return !rule || rule === 'blacklist';
     };
 
+    Config.prototype.isRuleWhiteList = function() {
+      var rule;
+
+      rule = this.getOpentabSettings()['rule'];
+      return !rule || rule === 'whitelist';
+    };
+
+    Config.prototype.setRule = function(rule) {
+      LOGGER.info("[Config] Reset opentabStatus: rule=" + rule);
+      if (rule !== 'blacklist' && rule !== 'whitelist') {
+        throw Error("Invalid rule: " + rule);
+      }
+      if (this.getOpentabSettings()['rule'] !== rule) {
+        this.opentabStatus = {};
+      }
+      this.getOpentabSettings()['rule'] = rule;
+    };
+
     Config.prototype.getBlackList = function() {
       return this.getOpentabSettings()['blacklist'] || [];
+    };
+
+    Config.prototype.getWhiteList = function() {
+      return this.getOpentabSettings()['whitelist'] || [];
     };
 
     Config.prototype.setBlackList = function(list) {
@@ -406,20 +428,43 @@
       this.getOpentabSettings()['blacklist'] = list;
     };
 
+    Config.prototype.setWhiteList = function(list) {
+      if (($.type(list)) !== 'array') {
+        throw Error("Invalid list " + list);
+      }
+      this.getOpentabSettings()['whitelist'] = list;
+    };
+
     Config.prototype.isOpentabEnable = function(commuId) {
-      return (this.getOpentabStatus(commuId)) === 'enable';
+      var _ref1;
+
+      return (_ref1 = this.getOpentabStatus(commuId)) === 'enable' || _ref1 === 'tempEnable';
     };
 
     Config.prototype.getOpentabStatus = function(commuId) {
       var st;
 
-      if (__indexOf.call(this.getBlackList(), commuId) >= 0) {
-        return 'disable';
+      if (this.isRuleBlackList()) {
+        st = this.opentabStatus[commuId];
+        if (!st) {
+          if (__indexOf.call(this.getBlackList(), commuId) >= 0) {
+            st = 'disable';
+          } else {
+            st = 'enable';
+          }
+        }
+      } else {
+        st = this.opentabStatus[commuId];
+        if (!st) {
+          if (__indexOf.call(this.getWhiteList(), commuId) >= 0) {
+            st = 'enable';
+          } else {
+            st = 'disable';
+          }
+        }
       }
-      st = this.opentabStatus[commuId] || 'enable';
-      if (st === 'disable') {
+      if (status === 'enable' || status === 'disable') {
         delete this.opentabStatus[commuId];
-        st = 'enable';
       }
       return st;
     };
@@ -427,12 +472,24 @@
     Config.prototype.setOpentabStatus = function(commuId, status) {
       var save;
 
-      this.opentabStatus[commuId] = status;
-      save = false;
-      if (status === 'disable') {
-        save = this.addOpentabBlackList(commuId);
+      if (status === 'enable' || status === 'disable') {
+        delete this.opentabStatus[commuId];
       } else {
-        save = this.removeOpentabBlackList(commuId);
+        this.opentabStatus[commuId] = status;
+      }
+      save = false;
+      if (this.isRuleBlackList()) {
+        if (status === 'disable' || status === 'tempEnable') {
+          save = this.addOpentabBlackList(commuId);
+        } else {
+          save = this.removeOpentabBlackList(commuId);
+        }
+      } else {
+        if (status === 'enable' || status === 'tempDisable') {
+          save = this.addOpentabWhiteList(commuId);
+        } else {
+          save = this.removeOpentabWhiteList(commuId);
+        }
       }
       if (save) {
         this.save();
@@ -450,10 +507,33 @@
       return true;
     };
 
+    Config.prototype.addOpentabWhiteList = function(commuId) {
+      var list;
+
+      list = this.getWhiteList();
+      if (__indexOf.call(list, commuId) >= 0) {
+        return false;
+      }
+      list.push(commuId);
+      return true;
+    };
+
     Config.prototype.removeOpentabBlackList = function(commuId) {
       var idx, list;
 
       list = this.getBlackList();
+      idx = list.indexOf(commuId);
+      if (idx < 0) {
+        return false;
+      }
+      list.splice(idx, 1);
+      return true;
+    };
+
+    Config.prototype.removeOpentabWhiteList = function(commuId) {
+      var idx, list;
+
+      list = this.getWhiteList();
       idx = list.indexOf(commuId);
       if (idx < 0) {
         return false;
@@ -497,7 +577,8 @@
         enableAutoJump: this.getEnableAutoJump(),
         autoJumpIntervalSec: this.getAutoJumpIntervalSec(),
         enableAutoEnter: this.getEnableAutoEnter(),
-        enableHistory: this.isNiconamaEnabled('history')
+        enableHistory: this.isNiconamaEnabled('history'),
+        isRuleBlackList: this.isRuleBlackList()
       };
       LOGGER.log("[Config] Get config for autojump", conf);
       return conf;

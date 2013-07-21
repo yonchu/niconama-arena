@@ -294,8 +294,24 @@ bg.Config = class Config
     rule = @getOpentabSettings()['rule']
     return not rule or rule is 'blacklist'
 
+  isRuleWhiteList: ->
+    rule = @getOpentabSettings()['rule']
+    return not rule or rule is 'whitelist'
+
+  setRule: (rule) ->
+    LOGGER.info "[Config] Reset opentabStatus: rule=#{rule}"
+    unless rule in  ['blacklist', 'whitelist']
+      throw Error "Invalid rule: #{rule}"
+    if @getOpentabSettings()['rule'] isnt rule
+      @opentabStatus = {}
+    @getOpentabSettings()['rule'] = rule
+    return
+
   getBlackList: ->
     return @getOpentabSettings()['blacklist'] or []
+
+  getWhiteList: ->
+    return @getOpentabSettings()['whitelist'] or []
 
   setBlackList: (list) ->
     if ($.type list) isnt 'array'
@@ -303,25 +319,50 @@ bg.Config = class Config
     @getOpentabSettings()['blacklist'] = list
     return
 
+  setWhiteList: (list) ->
+    if ($.type list) isnt 'array'
+      throw Error "Invalid list #{list}"
+    @getOpentabSettings()['whitelist'] = list
+    return
+
   isOpentabEnable: (commuId) ->
-    return (@getOpentabStatus commuId) is 'enable'
+    return (@getOpentabStatus commuId) in ['enable', 'tempEnable']
 
   getOpentabStatus: (commuId) ->
-    if commuId in @getBlackList()
-      return 'disable'
-    st = @opentabStatus[commuId] or 'enable'
-    if st is 'disable'
+    if @isRuleBlackList()
+      st = @opentabStatus[commuId]
+      unless st
+        if commuId in @getBlackList()
+          st = 'disable'
+        else
+          st = 'enable'
+    else
+      st = @opentabStatus[commuId]
+      unless st
+        if commuId in @getWhiteList()
+          st = 'enable'
+        else
+          st = 'disable'
+    if status in ['enable', 'disable']
       delete @opentabStatus[commuId]
-      st = 'enable'
     return st
 
   setOpentabStatus: (commuId, status) ->
-    @opentabStatus[commuId] = status
-    save = false
-    if status is 'disable'
-      save = @addOpentabBlackList commuId
+    if status in ['enable', 'disable']
+      delete @opentabStatus[commuId]
     else
-      save = @removeOpentabBlackList commuId
+      @opentabStatus[commuId] = status
+    save = false
+    if @isRuleBlackList()
+      if status in ['disable', 'tempEnable']
+        save = @addOpentabBlackList commuId
+      else
+        save = @removeOpentabBlackList commuId
+    else
+      if status in ['enable', 'tempDisable']
+        save = @addOpentabWhiteList commuId
+      else
+        save = @removeOpentabWhiteList commuId
     @save() if save
     return
 
@@ -331,8 +372,21 @@ bg.Config = class Config
     list.push commuId
     return true
 
+  addOpentabWhiteList: (commuId) ->
+    list = @getWhiteList()
+    return false if commuId in list
+    list.push commuId
+    return true
+
   removeOpentabBlackList: (commuId) ->
     list = @getBlackList()
+    idx = list.indexOf commuId
+    return false if idx < 0
+    list.splice idx, 1
+    return true
+
+  removeOpentabWhiteList: (commuId) ->
+    list = @getWhiteList()
     idx = list.indexOf commuId
     return false if idx < 0
     list.splice idx, 1
@@ -371,6 +425,7 @@ bg.Config = class Config
       autoJumpIntervalSec: @getAutoJumpIntervalSec()
       enableAutoEnter: @getEnableAutoEnter()
       enableHistory: @isNiconamaEnabled 'history'
+      isRuleBlackList: @isRuleBlackList()
     LOGGER.log "[Config] Get config for autojump", conf
     return conf
 

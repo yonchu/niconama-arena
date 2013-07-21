@@ -320,15 +320,13 @@ div#settings .ok-cancel-button button {
 #settings-content .margin-left2 {
   margin-left: 20px;
 }
-#setting-opentab > div > div {
-  margin-top: 10px;
+#setting-opentab-rule {
+  margin-top: 15px;
 }
-#setting-opentab > div > div label {
+#setting-opentab-rule input[type="text"] {
   display: block;
-  margin-bottom: 5px;
-}
-#setting-opentab > div > div input {
   width: 90%;
+  margin: 5px 0px 15px 0px;
 }
 #settings-status {
   display: none;

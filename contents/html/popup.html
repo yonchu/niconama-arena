@@ -170,8 +170,10 @@
                   <option value="disable">無効</option>
                   <option value="onair">開演</option>
                 </select>
-                <div>
-                  <label>除外設定 (例: co01234,ch56789):</label>
+                <div id="setting-opentab-rule">
+                  <input type="radio" name="rule" value="blacklist" /><span title='デフォルト"有効"で"無効"にしたい放送を指定する'> Black-List (例: co01234,ch56789):</span>
+                  <input type="text" />
+                  <input type="radio" name="rule" value="whitelist" /><span title='デフォルト"無効"で"有効"にしたい放送を指定する'> White-List (例: co01234,ch56789):</span>
                   <input type="text" />
                 </div>
               </div>

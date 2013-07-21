@@ -566,7 +566,9 @@ popup.SettingsTab = class SettingsTab extends popup.BaseTab
     @$settingBadge = $('#setting-badge select')
     @$settingNotification = $('#setting-notification select')
     @$settingOpentabSelect = $('#setting-opentab select')
-    @$settingOpentabBlacklist = $('#setting-opentab input:text')
+    @$settingOpentabRule = $('#setting-opentab-rule input:radio[name="rule"]')
+    @$settingOpentabBlacklist = $('#setting-opentab-rule input:text:eq(0)')
+    @$settingOpentabWhitelist = $('#setting-opentab-rule input:text:eq(1)')
 
   # === Event listeners.
   initEventListeners: ->
@@ -647,13 +649,19 @@ popup.SettingsTab = class SettingsTab extends popup.BaseTab
       name = select.getAttribute 'name'
       value = select.value
       @config.setOpentabEnable name, value
-    blacklist = @$settingOpentabBlacklist.val()
-    if blacklist
-      blacklist = blacklist.replace(/\ /g, '').split ','
-    else
-      blacklist = []
+    rule = @$settingOpentabRule.filter(':checked').val()
+    blacklist = @getRuleList @$settingOpentabBlacklist.val()
+    whitelist = @getRuleList @$settingOpentabWhitelist.val()
+    @config.setRule rule
     @config.setBlackList blacklist
+    @config.setWhiteList whitelist
     return
+
+  getRuleList: (ruleList) ->
+    ret = []
+    if ruleList
+      ret = ruleList.replace(/\ /g, '').split ','
+    return ret
 
   restoreSettings: ->
     # ===== autoJump/autoEnter =====
@@ -683,8 +691,14 @@ popup.SettingsTab = class SettingsTab extends popup.BaseTab
       name = select.getAttribute 'name'
       value = @config.getOpentabEnable name
       select.value = value
+    if @config.isRuleBlackList()
+      @$settingOpentabRule.eq(0).prop('checked', true)
+    else
+      @$settingOpentabRule.eq(1).prop('checked', true)
     blacklist = @config.getBlackList()
+    whitelist = @config.getWhiteList()
     @$settingOpentabBlacklist.val (blacklist.join ',')
+    @$settingOpentabWhitelist.val (whitelist.join ',')
     return
 
 

@@ -307,21 +307,49 @@
   aujmp.OpentabStatus = OpentabStatus = (function() {
     OpentabStatus.TPL = '<a href="javascript:void(0)">自動タブOPEN' + ' (%commuId%): &nbsp;<span>???</span></a>';
 
-    OpentabStatus.OPENTAB_STATUS = {
-      'disable': {
-        className: 'oepntab-disable',
-        msg: '無効',
-        next: 'enable'
+    OpentabStatus.OPENTAB_STATUS_BLACK_LIST = {
+      'enable': {
+        className: 'oepntab-enable',
+        msg: '有効',
+        next: 'tempDisable'
       },
       'tempDisable': {
         className: 'oepntab-tempDisable',
         msg: '一時無効',
         next: 'disable'
       },
+      'disable': {
+        className: 'oepntab-disable',
+        msg: '無効',
+        next: 'tempEnable'
+      },
+      'tempEnable': {
+        className: 'oepntab-tempEnable',
+        msg: '一時有効',
+        next: 'enable'
+      }
+    };
+
+    OpentabStatus.OPENTAB_STATUS_WHITE_LIST = {
       'enable': {
         className: 'oepntab-enable',
         msg: '有効',
         next: 'tempDisable'
+      },
+      'tempDisable': {
+        className: 'oepntab-tempDisable',
+        msg: '一時無効',
+        next: 'disable'
+      },
+      'disable': {
+        className: 'oepntab-disable',
+        msg: '無効',
+        next: 'tempEnable'
+      },
+      'tempEnable': {
+        className: 'oepntab-tempEnable',
+        msg: '一時有効',
+        next: 'enable'
       }
     };
 
@@ -398,7 +426,11 @@
       var className, map, msg;
 
       LOGGER.log("[niconama-arena][OpentabStatus] Show opentab status: " + status);
-      map = aujmp.OpentabStatus.OPENTAB_STATUS;
+      if (this.config.isRuleBlackList) {
+        map = aujmp.OpentabStatus.OPENTAB_STATUS_BLACK_LIST;
+      } else {
+        map = aujmp.OpentabStatus.OPENTAB_STATUS_WHITE_LIST;
+      }
       msg = map[status].msg;
       className = map[status].className;
       this.$toggleButton.find('span').html(msg);
@@ -411,7 +443,11 @@
 
       event.preventDefault();
       className = this.$toggleButton.attr('class');
-      map = aujmp.OpentabStatus.OPENTAB_STATUS;
+      if (this.config.isRuleBlackList) {
+        map = aujmp.OpentabStatus.OPENTAB_STATUS_BLACK_LIST;
+      } else {
+        map = aujmp.OpentabStatus.OPENTAB_STATUS_WHITE_LIST;
+      }
       for (key in map) {
         if (!__hasProp.call(map, key)) continue;
         value = map[key];

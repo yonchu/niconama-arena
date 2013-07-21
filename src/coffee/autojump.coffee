@@ -248,19 +248,41 @@ aujmp.OpentabStatus = class OpentabStatus
   @TPL: '<a href="javascript:void(0)">自動タブOPEN' \
     + ' (%commuId%): &nbsp;<span>???</span></a>'
 
-  @OPENTAB_STATUS:
-    'disable':
-      className: 'oepntab-disable'
-      msg: '無効'
-      next: 'enable'
-    'tempDisable':
-      className: 'oepntab-tempDisable'
-      msg: '一時無効'
-      next: 'disable'
+  @OPENTAB_STATUS_BLACK_LIST:
     'enable':
       className: 'oepntab-enable'
       msg: '有効'
       next: 'tempDisable'
+    'tempDisable':
+      className: 'oepntab-tempDisable'
+      msg: '一時無効'
+      next: 'disable'
+    'disable':
+      className: 'oepntab-disable'
+      msg: '無効'
+      next: 'tempEnable'
+    'tempEnable':
+      className: 'oepntab-tempEnable'
+      msg: '一時有効'
+      next: 'enable'
+
+  @OPENTAB_STATUS_WHITE_LIST:
+    'enable':
+      className: 'oepntab-enable'
+      msg: '有効'
+      next: 'tempDisable'
+    'tempDisable':
+      className: 'oepntab-tempDisable'
+      msg: '一時無効'
+      next: 'disable'
+    'disable':
+      className: 'oepntab-disable'
+      msg: '無効'
+      next: 'tempEnable'
+    'tempEnable':
+      className: 'oepntab-tempEnable'
+      msg: '一時有効'
+      next: 'enable'
 
   # === Constructor.
   constructor: (@$el, @livePage, @config) ->
@@ -320,7 +342,10 @@ aujmp.OpentabStatus = class OpentabStatus
 
   showOpentabStatus: (status) ->
     LOGGER.log "[niconama-arena][OpentabStatus] Show opentab status: #{status}"
-    map = aujmp.OpentabStatus.OPENTAB_STATUS
+    if @config.isRuleBlackList
+      map = aujmp.OpentabStatus.OPENTAB_STATUS_BLACK_LIST
+    else
+      map = aujmp.OpentabStatus.OPENTAB_STATUS_WHITE_LIST
     msg = map[status].msg
     className = map[status].className
     @$toggleButton.find('span').html msg
@@ -330,7 +355,10 @@ aujmp.OpentabStatus = class OpentabStatus
   onToggleButton: (event) =>
     event.preventDefault()
     className = @$toggleButton.attr 'class'
-    map = aujmp.OpentabStatus.OPENTAB_STATUS
+    if @config.isRuleBlackList
+      map = aujmp.OpentabStatus.OPENTAB_STATUS_BLACK_LIST
+    else
+      map = aujmp.OpentabStatus.OPENTAB_STATUS_WHITE_LIST
     for own key, value of map
       if value.className is className
         @saveOpentabStatus value.next
