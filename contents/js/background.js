@@ -2058,7 +2058,7 @@
         try {
           streamList = response.reserved_stream_list;
           total = response.total;
-          if (!(streamList && streamList.length > 0 && index < total)) {
+          if (!(streamList && streamList.length > 0 && index <= total)) {
             LOGGER.log('[Official] End fetch from Commingsoon.');
             bg.DetailFetcher.fetch(_this.id, results, _this.cache, {
               isCancelFunc: _this._isCancelFethDetail

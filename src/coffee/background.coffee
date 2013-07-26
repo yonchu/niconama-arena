@@ -1543,7 +1543,7 @@ bg.Official = class Official extends bg.BaseLiveData
       try
         streamList = response.reserved_stream_list
         total = response.total
-        unless streamList and streamList.length > 0 and index < total
+        unless streamList and streamList.length > 0 and index <= total
           LOGGER.log '[Official] End fetch from Commingsoon.'
           bg.DetailFetcher.fetch(
             @id, results, @cache, isCancelFunc: @_isCancelFethDetail
