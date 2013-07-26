@@ -164,6 +164,7 @@ Chromeのデスクトップ通知用APIの変更により、デスクトップ�
     - サムネイルアイコン用URL "http://icon.nimg.jp/" を manifest/permissions に追加
     - chrome.notifications APIに対応
 - 2013/07/22 v0.4.0 自動タブオープンの除外設定にデフォルト無効を追加
+- 2013/07/26 v0.4.1 公式放送予定が全て取得できない問題を修正
 
 
 ## See also
