@@ -2059,20 +2059,19 @@
           streamList = response.reserved_stream_list;
           total = response.total;
           if (!(streamList && streamList.length > 0 && index <= total)) {
-            LOGGER.log('[Official] End fetch from Commingsoon.');
-            bg.DetailFetcher.fetch(_this.id, results, _this.cache, {
-              isCancelFunc: _this._isCancelFethDetail
-            }).done(_this.updateComplete).fail(_this.fetchError("from fetch detail"));
-            _this.data = results;
+            _this._finishFetchFromComingsoon(results);
             results = null;
             index = null;
             return;
           }
           _this._getResultsFromComingsoon(streamList, results);
           LOGGER.log("[Official] Fetch official from comingsoon finish " + index);
-          if (index >= 10) {
-            LOGGER.error("[Official] Error in fetch comingsoon: index over " + index, response);
-            throw Error("Index is too large");
+          if (index >= 30) {
+            LOGGER.warn("[Official] Error in fetch comingsoon: index over " + index, response);
+            _this._finishFetchFromComingsoon(results);
+            results = null;
+            index = null;
+            return;
           }
           _this._fetchFromComingsoon(index + 1, results);
         } catch (_error) {
@@ -2082,6 +2081,14 @@
         results = null;
         index = null;
       };
+    };
+
+    Official.prototype._finishFetchFromComingsoon = function(results) {
+      LOGGER.log('[Official] End fetch from Commingsoon.');
+      bg.DetailFetcher.fetch(this.id, results, this.cache, {
+        isCancelFunc: this._isCancelFethDetail
+      }).done(this.updateComplete).fail(this.fetchError("from fetch detail"));
+      this.data = results;
     };
 
     Official.prototype._getResultsFromComingsoon = function(list, results) {

@@ -1544,30 +1544,37 @@ bg.Official = class Official extends bg.BaseLiveData
         streamList = response.reserved_stream_list
         total = response.total
         unless streamList and streamList.length > 0 and index <= total
-          LOGGER.log '[Official] End fetch from Commingsoon.'
-          bg.DetailFetcher.fetch(
-            @id, results, @cache, isCancelFunc: @_isCancelFethDetail
-          ).done(
-            @updateComplete
-          ).fail(
-            @fetchError "from fetch detail"
-          )
-          # TODO キャッシュがない場合にのみ設定するほうが良いかも
-          @data = results
+          @_finishFetchFromComingsoon results
           results = null
           index = null
           return
         @_getResultsFromComingsoon streamList, results
         LOGGER.log "[Official] Fetch official from comingsoon finish #{index}"
-        if index >= 10
-          LOGGER.error "[Official] Error in fetch comingsoon: index over #{index}", response
-          throw Error "Index is too large"
+        if index >= 30
+          LOGGER.warn "[Official] Error in fetch comingsoon: index over #{index}", response
+          @_finishFetchFromComingsoon results
+          results = null
+          index = null
+          return
         @_fetchFromComingsoon index + 1, results
       catch error
         @updateError '[Official] Error in fetchFromComingsoonSuccess', error
       results = null
       index = null
       return
+
+  _finishFetchFromComingsoon: (results) ->
+    LOGGER.log '[Official] End fetch from Commingsoon.'
+    bg.DetailFetcher.fetch(
+      @id, results, @cache, isCancelFunc: @_isCancelFethDetail
+    ).done(
+      @updateComplete
+    ).fail(
+      @fetchError "from fetch detail"
+    )
+    # TODO キャッシュがない場合にのみ設定するほうが良いかも
+    @data = results
+    return
 
   _getResultsFromComingsoon: (list, results) ->
     for item in list
