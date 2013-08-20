@@ -46,8 +46,8 @@ def bump_up_version():
 @task
 def build_tmpl():
     print(green('Compile coffeescript files for template...'))
-    local('coffee -clb scripts/compile-tmpl.coffee')
-    local('coffee -clb src/templates/popup-tmpl.coffee')
+    local('coffee -cb scripts/compile-tmpl.coffee')
+    local('coffee -cb src/templates/popup-tmpl.coffee')
 
     print(green('Compile templates...'))
     local('node scripts/compile-tmpl.js')

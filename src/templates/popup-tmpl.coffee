@@ -3,7 +3,7 @@ module.exports['history'] = """
 <tr>
   <td><%= accessTime %></td>
   <td> <a href="<%= link %>"><img src="<%= thumnail %>" /></a></td>
-  <td><p><a href="<%= link %>" title="<%= title %>"><%= title %></a></p></td>
+  <td><p><a href="<%= link %>" target="_blank" title="<%= title %>"><%= title %></a></p></td>
   <td><%= startTime %></td>
 </tr>
 """

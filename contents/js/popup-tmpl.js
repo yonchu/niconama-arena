@@ -10,7 +10,7 @@ __p+='<tr>\n  <td>'+
 ((__t=( thumnail ))==null?'':__t)+
 '" /></a></td>\n  <td><p><a href="'+
 ((__t=( link ))==null?'':__t)+
-'" title="'+
+'" target="_blank" title="'+
 ((__t=( title ))==null?'':__t)+
 '">'+
 ((__t=( title ))==null?'':__t)+
