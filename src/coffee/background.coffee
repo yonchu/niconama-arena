@@ -812,20 +812,18 @@ bg.Notification = class Notification
   _createMessageForNewVer: (target) ->
     msg = ''
     now = Date.now()
-    @setStatus
     timeMsg = common.notification.timeMsg target.openTime, target.startTime
     if timeMsg.openTime
       msg += timeMsg.openTime
-      if timeMsg.startTime
-        msg += '  '
     if timeMsg.startTime
+      if timeMsg.openTime
+        msg += '\n'
       msg += timeMsg.startTime
-    msg += '\n'
     statusMsg = common.notification.statusMsg(
       target.openTime, target.startTime, target.endTime, now
     )
     if statusMsg.text
-      msg += statusMsg.text
+      msg += "\n<<#{statusMsg.text}>>"
     return msg
 
   ## Notification for webkit HTML notification.
