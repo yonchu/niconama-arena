@@ -1,4 +1,3 @@
-//@ sourceMappingURL=background.map
 (function() {
   var Background, Badge, BaseLiveData, Config, ConfigCommands, DetailFetcher, Favorite, History, HistoryCommands, LOGGER, LiveChecker, MyPage, NicoInfo, Notification, Official, OpenTab, Timeshift, bg, common, exports, _ref,
     __indexOf = [].indexOf || function(item) { for (var i = 0, l = this.length; i < l; i++) { if (i in this && this[i] === item) return i; } return -1; },

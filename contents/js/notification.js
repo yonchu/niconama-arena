@@ -1,4 +1,3 @@
-//@ sourceMappingURL=notification.map
 (function() {
   var LOGGER, NOTIFICATION, Notification, common, exports, ntf, _ref;
 

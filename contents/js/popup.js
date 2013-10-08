@@ -1,4 +1,3 @@
-//@ sourceMappingURL=popup.map
 (function() {
   var BaseTab, FavoriteTab, HistoryTab, LOGGER, LiveInfoHtml, LiveTab, OfficialTab, POPUP, Popup, SettingsTab, TabManager, TimeshiftTab, Validator, common, exports, popup, _ref,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },

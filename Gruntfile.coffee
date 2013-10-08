@@ -26,7 +26,7 @@ module.exports = (grunt) ->
     coffee:
       compile:
         options:
-          sourceMap: true
+          sourceMap: false
         files: [
             expand: true,
             cwd: srcCoffeeDir,
@@ -40,7 +40,7 @@ module.exports = (grunt) ->
       compileBare:
         options:
           bare: true,
-          sourceMap: true
+          sourceMap: false
         files: [
             expand: true,
             cwd: srcCoffeeDir,

@@ -1,4 +1,3 @@
-//@ sourceMappingURL=autojump.map
 (function() {
   var AUTO_ACTION, AutoAction, AutoEnter, AutoJump, HISTORY, History, LOGGER, LivePage, OpentabStatus, aujmp, common, exports, init, _ref,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
