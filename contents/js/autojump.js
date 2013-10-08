@@ -32,7 +32,7 @@
           this.pageType = 'gate-closed';
         }
       } else {
-        commuUrl = $('#watch_title_box > div > a').prop('href');
+        commuUrl = $('#watch_title_box a.commu_name').prop('href');
         if (commuUrl) {
           this.pageType = 'live';
         } else if ($('#gates').length) {
@@ -624,8 +624,8 @@
       var dateStr, openTimeStr, startTimeStr, time, timeMatch, yearStr;
 
       LOGGER.info("[niconama-arena][History] Saving history in live page: " + this.liveData.id);
-      this.liveData.title = $('#watch_title_box .box_inner .title').attr('title').trim();
-      this.liveData.thumnail = $('#watch_title_box .box_inner img:first').attr('src');
+      this.liveData.title = $('#watch_title_box .box_inner .title_text').text().trim();
+      this.liveData.thumnail = $('#watch_title_box .box_inner .thumb_area img:first').attr('src');
       time = $('#watch_tab_box .information').first().text().trim().replace(/：/g, ':');
       timeMatch = time.match(/(\d\d\d\d)\/(\d\d\/\d\d).*(\d\d:\d\d).*開場.*(\d\d:\d\d)開演/);
       if (timeMatch) {

@@ -30,7 +30,7 @@ aujmp.LivePage = class LivePage
       else
         @pageType = 'gate-closed'
     else
-      commuUrl = $('#watch_title_box > div > a').prop 'href'
+      commuUrl = $('#watch_title_box a.commu_name').prop 'href'
       if commuUrl
         # Live page.
         @pageType = 'live'
@@ -506,8 +506,8 @@ aujmp.History = class History
 
   setLiveDataForLive: ->
     LOGGER.info "[niconama-arena][History] Saving history in live page: #{@liveData.id}"
-    @liveData.title = $('#watch_title_box .box_inner .title').attr('title').trim()
-    @liveData.thumnail = $('#watch_title_box .box_inner img:first').attr 'src'
+    @liveData.title = $('#watch_title_box .box_inner .title_text').text().trim()
+    @liveData.thumnail = $('#watch_title_box .box_inner .thumb_area img:first').attr 'src'
     time = $('#watch_tab_box .information').first().text().trim().replace(/：/g, ':')
     timeMatch = time.match /(\d\d\d\d)\/(\d\d\/\d\d).*(\d\d:\d\d).*開場.*(\d\d:\d\d)開演/
     if timeMatch
