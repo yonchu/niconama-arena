@@ -17,7 +17,8 @@
     "tabs",
     "notifications",
     "http://*.nicovideo.jp/",
-    "http://icon.nimg.jp/"
+    "http://icon.nimg.jp/",
+    "http://nl.simg.jp/"
   ],
   "content_security_policy": "script-src 'self' https://ssl.google-analytics.com; object-src 'self'",
 
