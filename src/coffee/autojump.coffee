@@ -30,7 +30,7 @@ aujmp.LivePage = class LivePage
       else
         @pageType = 'gate-closed'
     else
-      commuUrl = $('#watch_title_box a.commu_name').prop 'href'
+      commuUrl = $('#watch_title_box a.commu_name,a.ch_name').prop 'href'
       if commuUrl
         # Live page.
         @pageType = 'live'
@@ -493,15 +493,15 @@ aujmp.History = class History
       dateStr = timeMatch[2]
       openTimeStr = timeMatch[3]
       startTimeStr = timeMatch[4]
-      @liveData.openTime = common.str2date yearStr, dateStr, openTimeStr
-      @liveData.startTime = common.str2date yearStr, dateStr, startTimeStr
+      @liveData.openTime = common.str2date(yearStr, dateStr, openTimeStr).getTime()
+      @liveData.startTime = common.str2date(yearStr, dateStr, startTimeStr).getTime()
     endTimeMatch = $('#bn_gbox .kaijo').next().text()
       .match /この番組は(\d\d\d\d)\/(\d\d\/\d\d).*(\d\d:\d\d)/
     if endTimeMatch
       endYearStr = endTimeMatch[1]
       endDateStr = endTimeMatch[2]
       endTimeStr = endTimeMatch[3]
-      @liveData.endTime = common.str2date endYearStr, endDateStr, endTimeStr
+      @liveData.endTime = common.str2date(endYearStr, endDateStr, endTimeStr).getTime()
     return @
 
   setLiveDataForLive: ->
