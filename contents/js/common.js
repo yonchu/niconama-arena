@@ -6,10 +6,8 @@ this.exports = (_ref = typeof exports !== "undefined" && exports !== null ? expo
 
 (function(exports) {
   var AjaxEx, EventDispatcher, LOGGER, Logger, common;
-
   exports.namespace = function(namespace, noConflict, fn) {
     var here, klass, parent, prev, token, tokens, _i, _len;
-
     if (noConflict == null) {
       noConflict = true;
     }
@@ -61,7 +59,6 @@ this.exports = (_ref = typeof exports !== "undefined" && exports !== null ? expo
 
     function Logger(level) {
       var methods;
-
       this.level = isNaN(level) ? common.Logger.DEFAULT_LEVEL : level;
       console.log("Create Logger: level = " + (this.getLevelName(this.level)));
       methods = this.make();
@@ -71,7 +68,6 @@ this.exports = (_ref = typeof exports !== "undefined" && exports !== null ? expo
 
     Logger.prototype.getLevelName = function(level) {
       var name, val, _ref1;
-
       _ref1 = common.Logger.LEVEL;
       for (name in _ref1) {
         val = _ref1[name];
@@ -84,7 +80,6 @@ this.exports = (_ref = typeof exports !== "undefined" && exports !== null ? expo
 
     Logger.prototype.make = function() {
       var key, l, methods;
-
       methods = {
         bind: [],
         apply: []
@@ -121,7 +116,6 @@ this.exports = (_ref = typeof exports !== "undefined" && exports !== null ? expo
   LOGGER = new common.Logger;
   common.str2date = function(year, date, time) {
     var d, dd, delta, hh, min, mm, sp;
-
     sp = date.split('/');
     mm = parseInt(sp[0], 10);
     dd = parseInt(sp[1], 10);
@@ -139,7 +133,6 @@ this.exports = (_ref = typeof exports !== "undefined" && exports !== null ? expo
   };
   common.date2String = function(date) {
     var dd, hh, min, mm;
-
     mm = date.getMonth() + 1;
     dd = date.getDate();
     hh = date.getHours();
@@ -160,7 +153,6 @@ this.exports = (_ref = typeof exports !== "undefined" && exports !== null ? expo
   };
   common.remainingTime = function(now, targetTime) {
     var d, delta, h, m, remainder, ret;
-
     delta = targetTime - now;
     d = Math.floor(delta / (24 * 60 * 60 * 1000));
     remainder = delta % (24 * 60 * 60 * 1000);
@@ -184,7 +176,6 @@ this.exports = (_ref = typeof exports !== "undefined" && exports !== null ? expo
   };
   common.httpRequest = function(url, callback) {
     var xhr;
-
     xhr = new XMLHttpRequest;
     xhr.onreadystatechange = function() {
       if (xhr.readyState === 4) {
@@ -226,7 +217,6 @@ this.exports = (_ref = typeof exports !== "undefined" && exports !== null ? expo
 
     AjaxEx.prototype._onFail = function(response) {
       var error;
-
       try {
         this._retry(response);
       } catch (_error) {
@@ -243,7 +233,6 @@ this.exports = (_ref = typeof exports !== "undefined" && exports !== null ? expo
     AjaxEx.prototype._retry = function(response) {
       var status,
         _this = this;
-
       status = response.status + '';
       LOGGER.error(("[AjaxEx] Error: retryCount=" + this.retryCount + ",") + (" status=" + status + ", url=" + this.request.url), this.request, response);
       if (this.retryCount >= 2) {
@@ -262,7 +251,6 @@ this.exports = (_ref = typeof exports !== "undefined" && exports !== null ? expo
 
     AjaxEx.prototype._sleep = function(sec) {
       var d;
-
       d = $.Deferred();
       setTimeout(function() {
         d.resolve();
@@ -286,7 +274,6 @@ this.exports = (_ref = typeof exports !== "undefined" && exports !== null ? expo
 
     EventDispatcher.prototype.addEventListener = function(event, callback, callbackObj) {
       var _base;
-
       if (!this.events.hasOwnProperty(event)) {
         this.events[event] = [];
       }
@@ -300,7 +287,6 @@ this.exports = (_ref = typeof exports !== "undefined" && exports !== null ? expo
 
     EventDispatcher.prototype.removeEventListener = function(event, callback, callbackObj) {
       var l, _i, _len, _ref1;
-
       if (this.events.hasOwnProperty(event)) {
         _ref1 = this.events[event];
         for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
@@ -315,7 +301,6 @@ this.exports = (_ref = typeof exports !== "undefined" && exports !== null ? expo
 
     EventDispatcher.prototype.dispatchEvent = function(event, data) {
       var l, _i, _len, _ref1;
-
       if (this.events.hasOwnProperty(event)) {
         data = data || [];
         if (!Array.isArray(data)) {
@@ -341,7 +326,6 @@ this.exports = (_ref = typeof exports !== "undefined" && exports !== null ? expo
   })();
   common.getLiveIdFromUrl = function(url) {
     var _ref1;
-
     return (_ref1 = url.match(/(watch|gate)\/(lv\d+)/)) != null ? _ref1[2] : void 0;
   };
   common.changeGate2Watch = function(url) {
@@ -350,7 +334,6 @@ this.exports = (_ref = typeof exports !== "undefined" && exports !== null ? expo
   common.notification = {};
   common.notification.timeMsg = function(openTime, startTime) {
     var openTimeStr, ret, startTimeStr;
-
     ret = {};
     if (openTime) {
       openTimeStr = common.date2String(openTime);
@@ -368,7 +351,6 @@ this.exports = (_ref = typeof exports !== "undefined" && exports !== null ? expo
   };
   return common.notification.statusMsg = function(openTime, startTime, endTime, now, beforeTimeSec) {
     var ret;
-
     if (beforeTimeSec == null) {
       beforeTimeSec = 300;
     }

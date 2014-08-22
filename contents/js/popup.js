@@ -35,7 +35,6 @@
 
     TabManager.prototype.onClickTab = function(event) {
       var tabId;
-
       event.preventDefault();
       tabId = $(event.target).attr('data-id');
       this.showTab(tabId);
@@ -52,7 +51,6 @@
 
     TabManager.prototype.getFirstTab = function() {
       var min, minTab, tab, tabId, _ref1;
-
       min = null;
       minTab = null;
       _ref1 = this.tabs;
@@ -69,7 +67,6 @@
 
     TabManager.prototype.activateTab = function(targetTabId) {
       var tab, tabId, _ref1;
-
       _ref1 = this.tabs;
       for (tabId in _ref1) {
         if (!__hasProp.call(_ref1, tabId)) continue;
@@ -85,7 +82,6 @@
 
     TabManager.prototype.register = function(tab) {
       var tabId;
-
       tabId = tab.tabId;
       if (this.tabs[tabId]) {
         throw Error("" + tabId + " is already registered.");
@@ -101,7 +97,6 @@
 
     TabManager.prototype.initTabs = function() {
       var $tab, $tabContent, i, parent, tab, tabId, _i, _ref1;
-
       this.$tabbars = $(this.barElem);
       this.$tabsContents = $(this.contentElem);
       console.assert(this.$tabbars.size() === this.$tabsContents.size());
@@ -130,7 +125,6 @@
 
     TabManager.prototype.showTab = function(tabId) {
       var tab;
-
       tab = this.getTab(tabId);
       if (!tab) {
         tab = this.getFirstTab();
@@ -149,7 +143,6 @@
 
     TabManager.prototype.updateAllTabs = function() {
       var tab, tabId, _ref1;
-
       _ref1 = this.tabs;
       for (tabId in _ref1) {
         if (!__hasProp.call(_ref1, tabId)) continue;
@@ -195,7 +188,6 @@
 
     Popup.prototype.setLastUpdateTime = function(tabId) {
       var date, hh, min, sec;
-
       date = this.nicoInfo.getLastUpdateTime(tabId);
       hh = '??';
       min = '??';
@@ -231,7 +223,6 @@
     Popup.prototype.onClickUpdateButton = function(event) {
       var $target,
         _this = this;
-
       $target = $(event.target);
       if (!$target.hasClass('active-button')) {
         return;
@@ -289,7 +280,6 @@
 
     BaseTab.prototype.showTabBadge = function(text) {
       var disp;
-
       disp = text ? 'block' : 'none';
       this.$tab.find('.tab-badge').css('display', disp).text(text);
       return this;
@@ -345,7 +335,6 @@
 
     LiveInfoHtml.prototype.setTime = function() {
       var openTimeStr, startTimeStr, time;
-
       time = '';
       if (this.item.openTime) {
         openTimeStr = common.date2String(this.item.openTime);
@@ -364,7 +353,6 @@
 
     LiveInfoHtml.prototype.setStatus = function() {
       var endTime, flags, openTime, startTime, status, _ref1, _ref2, _ref3;
-
       status = '';
       flags = [];
       openTime = (_ref1 = this.item.openTime) != null ? _ref1.getTime() : void 0;
@@ -440,7 +428,6 @@
 
     LiveTab.prototype.updateView = function(force) {
       var cache, currentData, html, item, liveInfoHtml, now, viewData, _i, _len;
-
       if (force == null) {
         force = false;
       }
@@ -559,7 +546,6 @@
 
     HistoryTab.prototype.showHistory = function() {
       var hist, histories, html, obj, _i, _len;
-
       this.$content.html('');
       histories = this.history.getHistories();
       LOGGER.log("Show history", histories);
@@ -626,7 +612,6 @@
       isRangeNumber: {
         validate: function(value, args) {
           var max, min;
-
           min = args.min;
           max = args.max;
           if (isNaN(value)) {
@@ -645,7 +630,6 @@
       isRangeMinNumber: {
         validate: function(value, args) {
           var min;
-
           min = args.min;
           if (isNaN(value)) {
             return false;
@@ -680,7 +664,6 @@
 
     Validator.prototype.validate = function(data) {
       var args, checker, msg, name, required, type, value;
-
       name = data.name;
       type = data.type;
       checker = this.checkers[type];
@@ -705,7 +688,6 @@
 
     Validator.prototype.makeMessage = function(name, inst, args) {
       var key, value;
-
       for (key in args) {
         if (!__hasProp.call(args, key)) continue;
         value = args[key];
@@ -723,7 +705,8 @@
 
     function SettingsTab(tabId, config) {
       this.onClickCancelButton = __bind(this.onClickCancelButton, this);
-      this.onClickOkButton = __bind(this.onClickOkButton, this);      SettingsTab.__super__.constructor.call(this, tabId, config);
+      this.onClickOkButton = __bind(this.onClickOkButton, this);
+      SettingsTab.__super__.constructor.call(this, tabId, config);
       this.$autoJumpCheckbox = $('#setting-auto-jump');
       this.$autoJumpIntervalInput = $('#setting-auto-jump-interval');
       this.$autoEnterCheckbox = $('#setting-auto-enter');
@@ -745,7 +728,6 @@
 
     SettingsTab.prototype.onClickOkButton = function(event) {
       var error;
-
       error = this.validate();
       if (error && error.length > 0) {
         LOGGER.error('Could not save settings.', error);
@@ -768,7 +750,6 @@
 
     SettingsTab.prototype.validate = function() {
       var data, validator;
-
       validator = new popup.Validator;
       data = {
         name: '次枠チェック間隔',
@@ -786,7 +767,6 @@
 
     SettingsTab.prototype.showMessage = function(msg, addClass) {
       var $status;
-
       LOGGER.log('showMessage');
       $status = $('#settings-status');
       $status.css('display', 'inline').addClass(addClass).text(msg);
@@ -799,7 +779,6 @@
 
     SettingsTab.prototype.saveSettings = function() {
       var blacklist, checkbox, checkboxes, name, rule, select, value, whitelist, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref1, _ref2, _ref3;
-
       this.config.setEnableAutoJump(this.$autoJumpCheckbox.prop('checked'));
       this.config.setAutoJumpIntervalSec(this.$autoJumpIntervalInput.val());
       this.config.setEnableAutoEnter(this.$autoEnterCheckbox.prop('checked'));
@@ -842,7 +821,6 @@
 
     SettingsTab.prototype.getRuleList = function(ruleList) {
       var ret;
-
       ret = [];
       if (ruleList) {
         ret = ruleList.replace(/\ /g, '').split(',');
@@ -852,7 +830,6 @@
 
     SettingsTab.prototype.restoreSettings = function() {
       var blacklist, checkbox, checkboxes, name, select, value, whitelist, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref1, _ref2, _ref3;
-
       this.$autoJumpCheckbox.prop('checked', this.config.getEnableAutoJump());
       this.$autoJumpIntervalInput.val(this.config.getAutoJumpIntervalSec());
       this.$autoEnterCheckbox.prop('checked', this.config.getEnableAutoEnter());
@@ -904,7 +881,6 @@
 
   $(function() {
     var config, history, nicoInfo, regTab;
-
     config = chrome.extension.getBackgroundPage().config;
     nicoInfo = chrome.extension.getBackgroundPage().nicoInfo;
     history = chrome.extension.getBackgroundPage().history;

@@ -12,7 +12,6 @@
   ntf.Notification = Notification = (function() {
     function Notification() {
       var _this = this;
-
       this.liveChecker = chrome.extension.getBackgroundPage().liveChecker;
       $(function() {
         _this.init();
@@ -26,7 +25,6 @@
 
     Notification.prototype.render = function() {
       var index, item, now;
-
       index = location.hash.slice(1);
       item = this.liveChecker.getNotificationTarget(index);
       LOGGER.info("index = " + index + ":", item);
@@ -50,7 +48,6 @@
 
     Notification.prototype.setTime = function(openTime, startTime) {
       var msg;
-
       msg = common.notification.timeMsg(openTime, startTime);
       if (msg.openTime) {
         $('#open-time').html(msg.openTime);
@@ -62,7 +59,6 @@
 
     Notification.prototype.setStatus = function(openTime, startTime, endTime, now) {
       var msg;
-
       msg = common.notification.statusMsg(openTime, startTime, endTime, now);
       if (msg.text) {
         $('#status').text(msg.text);

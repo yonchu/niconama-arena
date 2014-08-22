@@ -22,10 +22,8 @@
 
     Background.prototype.initEventListeners = function() {
       var _this = this;
-
       chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
         var args, logmsg, res, target;
-
         target = _this.commands[request.target];
         if (sender.tab) {
           logmsg = "[Background] Received message from a content script: " + sender.tab.url;
@@ -156,7 +154,6 @@
 
     Config.prototype._getValue = function(key, def) {
       var value;
-
       if (def == null) {
         def = void 0;
       }
@@ -180,7 +177,6 @@
 
     Config.prototype._initSettings = function() {
       var settings;
-
       settings = localStorage.settings;
       if (settings) {
         this.settings = JSON.parse(settings);
@@ -193,7 +189,6 @@
 
     Config.prototype.save = function() {
       var settings;
-
       settings = JSON.stringify(this.settings);
       localStorage.settings = settings;
       LOGGER.log("[Config] Saved settings: ", settings);
@@ -201,7 +196,6 @@
 
     Config.prototype._getSettingsValue = function(key, def) {
       var value;
-
       if (def == null) {
         def = void 0;
       }
@@ -230,7 +224,6 @@
 
     Config.prototype._getSettingsFlag = function(key) {
       var value;
-
       value = this._getSettingsValue(key);
       return !!value;
     };
@@ -291,7 +284,6 @@
 
     Config.prototype.setBadgeEnable = function(key, value) {
       var _ref1;
-
       if (!value || (_ref1 = !value, __indexOf.call(bg.Config.BADGE_ENABLE_VALUES, _ref1) >= 0)) {
         throw Error("Invalid value " + value);
       }
@@ -331,7 +323,6 @@
 
     Config.prototype.setNotificationEnable = function(key, value) {
       var _ref1;
-
       if (!value || (_ref1 = !value, __indexOf.call(bg.Config.BADGE_ENABLE_VALUES, _ref1) >= 0)) {
         throw Error("Invalid value " + value);
       }
@@ -364,7 +355,6 @@
 
     Config.prototype.setOpentabEnable = function(key, value) {
       var _ref1;
-
       if (!value || (_ref1 = !value, __indexOf.call(bg.Config.BADGE_ENABLE_VALUES, _ref1) >= 0)) {
         throw Error("Invalid value " + value);
       }
@@ -389,14 +379,12 @@
 
     Config.prototype.isRuleBlackList = function() {
       var rule;
-
       rule = this.getOpentabSettings()['rule'];
       return !rule || rule === 'blacklist';
     };
 
     Config.prototype.isRuleWhiteList = function() {
       var rule;
-
       rule = this.getOpentabSettings()['rule'];
       return !rule || rule === 'whitelist';
     };
@@ -436,13 +424,11 @@
 
     Config.prototype.isOpentabEnable = function(commuId) {
       var _ref1;
-
       return (_ref1 = this.getOpentabStatus(commuId)) === 'enable' || _ref1 === 'tempEnable';
     };
 
     Config.prototype.getOpentabStatus = function(commuId) {
       var st;
-
       if (this.isRuleBlackList()) {
         st = this.opentabStatus[commuId];
         if (!st) {
@@ -470,7 +456,6 @@
 
     Config.prototype.setOpentabStatus = function(commuId, status) {
       var save;
-
       if (status === 'enable' || status === 'disable') {
         delete this.opentabStatus[commuId];
       } else {
@@ -497,7 +482,6 @@
 
     Config.prototype.addOpentabBlackList = function(commuId) {
       var list;
-
       list = this.getBlackList();
       if (__indexOf.call(list, commuId) >= 0) {
         return false;
@@ -508,7 +492,6 @@
 
     Config.prototype.addOpentabWhiteList = function(commuId) {
       var list;
-
       list = this.getWhiteList();
       if (__indexOf.call(list, commuId) >= 0) {
         return false;
@@ -519,7 +502,6 @@
 
     Config.prototype.removeOpentabBlackList = function(commuId) {
       var idx, list;
-
       list = this.getBlackList();
       idx = list.indexOf(commuId);
       if (idx < 0) {
@@ -531,7 +513,6 @@
 
     Config.prototype.removeOpentabWhiteList = function(commuId) {
       var idx, list;
-
       list = this.getWhiteList();
       idx = list.indexOf(commuId);
       if (idx < 0) {
@@ -571,7 +552,6 @@
 
     Config.prototype.getConfigForAutoJump = function() {
       var conf;
-
       conf = {
         enableAutoJump: this.getEnableAutoJump(),
         autoJumpIntervalSec: this.getAutoJumpIntervalSec(),
@@ -601,7 +581,6 @@
 
     NicoInfo.prototype.getLiveData = function(key) {
       var liveData, _i, _len, _ref1;
-
       _ref1 = this.liveDataList;
       for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
         liveData = _ref1[_i];
@@ -622,7 +601,6 @@
 
     NicoInfo.prototype.isUpdated = function(key, value) {
       var liveData;
-
       liveData = this.getLiveData(key);
       if (value != null) {
         liveData.isUpdated = !!value;
@@ -642,7 +620,6 @@
 
     NicoInfo.prototype.updateAll = function(force, useCache) {
       var liveData, _i, _len, _ref1;
-
       if (force == null) {
         force = false;
       }
@@ -675,7 +652,6 @@
 
     LiveChecker.prototype._initEventListeners = function() {
       var time;
-
       time = bg.LiveChecker.CHECK_TIMER_INTERVAL_SEC * 1000;
       LOGGER.log("[LiveChecker] Setup check timer", time);
       setTimeout(this._onTimeoutCheck, time);
@@ -683,11 +659,9 @@
 
     LiveChecker.prototype._onTimeoutCheck = function() {
       var _this = this;
-
       LOGGER.log('[LiveChecker] Start live checker process.');
       $.when(this.badge.run(), this.notification.run(), this.openTab.run()).always(function() {
         var time;
-
         LOGGER.log('[LiveChecker] End live check process.');
         time = bg.LiveChecker.CHECK_TIMER_INTERVAL_SEC * 1000;
         LOGGER.log("[LiveChecker] Setup check timer", time);
@@ -718,7 +692,6 @@
 
     Badge.prototype.run = function() {
       var count, liveData, liveDataList, _i, _j, _len, _len1;
-
       LOGGER.log('[Badge] Start set badge process.');
       liveDataList = this.nicoInfo.liveDataList;
       for (_i = 0, _len = liveDataList.length; _i < _len; _i++) {
@@ -782,7 +755,6 @@
 
     OpenTab.prototype._getTargets = function() {
       var isBeforeEnabled, isGateEnabled, isOnairEnabled, item, liveData, liveDataList, n, openTabTargets, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref1, _ref2, _ref3;
-
       liveDataList = this.nicoInfo.liveDataList;
       openTabTargets = [];
       for (_i = 0, _len = liveDataList.length; _i < _len; _i++) {
@@ -856,7 +828,6 @@
     OpenTab.prototype._openTabs = function(targets) {
       var n, tryNext,
         _this = this;
-
       n = targets.length;
       tryNext = function(index) {
         if (index >= n) {
@@ -870,7 +841,6 @@
         }
         chrome.tabs.query({}, function(tabs) {
           var error, target;
-
           try {
             target = targets[index];
             if (_this._openTab(target, tabs)) {
@@ -895,7 +865,6 @@
 
     OpenTab.prototype._openTab = function(url, tabs) {
       var matchUrl, re, tab, _i, _len, _ref1;
-
       matchUrl = url.replace(/http[s]?:\/\//, '').replace(/\?.*/, '');
       re = new RegExp(matchUrl);
       for (_i = 0, _len = tabs.length; _i < _len; _i++) {
@@ -924,7 +893,6 @@
 
     function Notification(config, nicoInfo) {
       var _ref1;
-
       this.config = config;
       this.nicoInfo = nicoInfo;
       this._onerrorNotification = __bind(this._onerrorNotification, this);
@@ -955,7 +923,6 @@
 
     Notification.prototype.run = function() {
       var error;
-
       LOGGER.log('[Notification] Start notification process.');
       try {
         this.defer = $.Deferred();
@@ -982,7 +949,6 @@
 
     Notification.prototype._makeTargets = function() {
       var isBeforeEnabled, isGateEnabled, isOnairEnabled, item, liveData, liveDataList, n, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref1, _ref2, _ref3;
-
       if (this.targets) {
         LOGGER.info('[Notification] Cancel notification (now notifying)');
         return;
@@ -1049,7 +1015,6 @@
 
     Notification.prototype._notify = function() {
       var t;
-
       if (!this.targets || this.index >= this.targets.length) {
         LOGGER.log('[Notification] End notification process.');
         t = this.targets;
@@ -1066,7 +1031,6 @@
 
     Notification.prototype._notifyNewVersion = function() {
       var message, opt, target;
-
       target = this.targets[this.index];
       message = this._createMessageForNewVer(target);
       opt = {
@@ -1080,7 +1044,6 @@
 
     Notification.prototype._onCreateNotificationNewVer = function(notificationId) {
       var _this = this;
-
       if (!notificationId) {
         LOGGER.error("[Notification] Notification create error (notificationId is null)", this.targets[this.index]);
         this._onClosedNotificationNewVer();
@@ -1116,7 +1079,6 @@
 
     Notification.prototype._createMessageForNewVer = function(target) {
       var msg, now, statusMsg, timeMsg;
-
       msg = '';
       now = Date.now();
       timeMsg = common.notification.timeMsg(target.openTime, target.startTime);
@@ -1138,7 +1100,6 @@
 
     Notification.prototype._notifyWithHtml = function() {
       var url;
-
       url = bg.Notification.NOTIFICATION_URL + this.index;
       LOGGER.log("[Notification] Notify(html) " + url + "\n", this.targets[this.index]);
       this.ntf = webkitNotifications.createHTMLNotification(url);
@@ -1150,7 +1111,6 @@
 
     Notification.prototype._ondisplayNotification = function(event) {
       var _this = this;
-
       this.cancelTimer = setTimeout(function() {
         _this.cancelTimer = null;
         if (_this.ntf) {
@@ -1171,7 +1131,6 @@
 
     Notification.prototype._onerrorNotification = function(event) {
       var t;
-
       LOGGER.error("[Notification] Notification error index=" + this.index, this.targets);
       t = this.targets[this.index];
       this._clean();
@@ -1237,7 +1196,6 @@
 
     BaseLiveData.prototype.update = function(force, useCache) {
       var error;
-
       if (force == null) {
         force = false;
       }
@@ -1278,7 +1236,6 @@
 
     BaseLiveData.prototype.fetchError = function(msg) {
       var _this = this;
-
       return function(response) {
         _this.updateError("Fetch error: " + msg, response);
         return msg = null;
@@ -1287,7 +1244,6 @@
 
     BaseLiveData.prototype.updateError = function(msg, obj) {
       var errmsg;
-
       if (obj == null) {
         obj = null;
       }
@@ -1320,7 +1276,6 @@
 
     BaseLiveData.prototype.countBadge = function() {
       var beforeCount, count, gateCount, notifications, onairCount, time;
-
       time = this.config.getBadgeBeforeTimeSec(this.id);
       notifications = this.getNofications(time);
       beforeCount = notifications.before.length;
@@ -1342,7 +1297,6 @@
 
     BaseLiveData.prototype.getNofications = function(beforeTimeSec) {
       var item, items, now, results, _i, _len;
-
       if (beforeTimeSec == null) {
         beforeTimeSec = null;
       }
@@ -1375,7 +1329,6 @@
 
     BaseLiveData.prototype.isLiveOnair = function(item, now) {
       var startTime, _ref1;
-
       if (this.isLiveClosed(item, now)) {
         return false;
       }
@@ -1390,7 +1343,6 @@
 
     BaseLiveData.prototype.isLiveOpenGate = function(item, now) {
       var openTime, _ref1;
-
       if (this.isLiveClosed(item, now)) {
         return false;
       }
@@ -1406,7 +1358,6 @@
 
     BaseLiveData.prototype.isLiveBeforeOpenGate = function(item, now, beforeTimeSec) {
       var openTime, _ref1;
-
       if (this.isLiveClosed(item, now)) {
         return false;
       }
@@ -1422,7 +1373,6 @@
 
     BaseLiveData.prototype.isLiveClosed = function(item, now) {
       var endTime, _ref1;
-
       endTime = (_ref1 = item.endTime) != null ? _ref1.getTime() : void 0;
       if (endTime && now > endTime) {
         return true;
@@ -1467,7 +1417,6 @@
 
     DetailFetcher.prototype.fetch = function() {
       var error;
-
       LOGGER.log("[DetailFetcher][" + this.id + "] Start fetch detail process.");
       try {
         this.defer = $.Deferred();
@@ -1482,7 +1431,6 @@
 
     DetailFetcher.prototype._fetchDetail = function() {
       var item, nextIndex, now, useCache, _i, _ref1, _ref2;
-
       if (!this.data || this.index >= this.data.length) {
         this.defer.resolve(this.data);
         this._clean();
@@ -1510,7 +1458,6 @@
 
     DetailFetcher.prototype._isCancel = function(item, now) {
       var ret;
-
       ret = this._isCancelForCommon(item, now);
       if (this.isCancelFunc) {
         ret = this.isCancelFunc(item, now, ret);
@@ -1547,7 +1494,6 @@
 
     DetailFetcher.prototype._onDone = function(response) {
       var error, item;
-
       try {
         item = this.data[this.index];
         this._setFromResponse(item, response);
@@ -1574,7 +1520,6 @@
 
     DetailFetcher.prototype._setFromCache = function(data, cache) {
       var c, _i, _len;
-
       if (!cache) {
         return false;
       }
@@ -1605,7 +1550,6 @@
 
     DetailFetcher.prototype._setFromResponse = function(data, response) {
       var $page, commuUrl, dateStr, endDateStr, endTimeMatch, endTimeStr, endYearStr, openTimeStr, startTimeStr, time, timeMatch, yearStr, _ref1;
-
       $page = $($.parseHTML(common.transIMG(response)));
       commuUrl = $page.find('.com,.chan .smn a').prop('href');
       if (commuUrl) {
@@ -1659,7 +1603,8 @@
 
     function MyPage() {
       this._onFail = __bind(this._onFail, this);
-      this._onDone = __bind(this._onDone, this);      this.defer = null;
+      this._onDone = __bind(this._onDone, this);
+      this.defer = null;
     }
 
     MyPage.fetch = function(nocache) {
@@ -1693,7 +1638,6 @@
 
     MyPage.prototype._fetchFromMypage = function(nocache) {
       var _this = this;
-
       if (nocache || !this.cache) {
         LOGGER.log("[MyPage] Fetch from mypage: now = " + (new Date));
         common.AjaxEx.ajax({
@@ -1710,7 +1654,6 @@
 
     MyPage.prototype._onDone = function(response) {
       var $page, error, updatedAt;
-
       try {
         $page = $($.parseHTML(common.transIMG(response)));
         error = this._checkErrorPage($page);
@@ -1731,7 +1674,6 @@
 
     MyPage.prototype._onFail = function(response) {
       var e;
-
       e = Error('[MyPage] Error in AjaxEx');
       e.response = response;
       this.defer.reject(this.cache, this.updatedAt, e);
@@ -1755,7 +1697,6 @@
     MyPage.prototype._setupUpdateTimer = function(time) {
       var timer,
         _this = this;
-
       if (this.timer) {
         return;
       }
@@ -1778,7 +1719,6 @@
 
     MyPage.prototype._checkErrorPage = function($page) {
       var $error_type, cause, _ref1;
-
       $error_type = $page.find('.error_type');
       if (!$error_type.length) {
         return;
@@ -1799,7 +1739,8 @@
 
     function Favorite(config) {
       this._onFailFetchMyPage = __bind(this._onFailFetchMyPage, this);
-      this._onDoneFetchMypage = __bind(this._onDoneFetchMypage, this);      Favorite.__super__.constructor.call(this, 'favorite', config);
+      this._onDoneFetchMypage = __bind(this._onDoneFetchMypage, this);
+      Favorite.__super__.constructor.call(this, 'favorite', config);
     }
 
     Favorite.prototype.updateData = function() {
@@ -1817,7 +1758,6 @@
 
     Favorite.prototype._onDoneFetchMypage = function($page, updatedAt) {
       var error, results;
-
       try {
         LOGGER.log("[Favorite] Fetch mypage done", updatedAt);
         results = this._getResultsFromMypage($page);
@@ -1843,7 +1783,6 @@
 
     Favorite.prototype._getResultsFromMypage = function($page) {
       var $item, $items, a, dateStr, item, now, nowYear, openTimeStr, results, ret, startTimeStr, time, timeMatch, _i, _len, _ref1;
-
       $items = $page.find('#Favorite_list .liveItems .liveItem,.liveItem_reserve,.liveItem_ch');
       now = new Date();
       nowYear = now.getFullYear();
@@ -1878,7 +1817,6 @@
       }
       results.sort(function(a, b) {
         var at, bt;
-
         if (a.startTime) {
           at = a.startTime.getTime();
           bt = b.startTime.getTime();
@@ -1903,7 +1841,8 @@
 
     function Timeshift(config) {
       this._onFailFetchMyPage = __bind(this._onFailFetchMyPage, this);
-      this._onDoneFetchMypage = __bind(this._onDoneFetchMypage, this);      Timeshift.__super__.constructor.call(this, 'timeshift', config);
+      this._onDoneFetchMypage = __bind(this._onDoneFetchMypage, this);
+      Timeshift.__super__.constructor.call(this, 'timeshift', config);
     }
 
     Timeshift.prototype.updateData = function() {
@@ -1917,7 +1856,6 @@
 
     Timeshift.prototype._onDoneFetchMypage = function($page, updatedAt) {
       var error, results;
-
       try {
         LOGGER.log("[Timeshift] Fetch mypage done", updatedAt);
         results = this._getResultsFromMypage($page);
@@ -1946,7 +1884,6 @@
 
     Timeshift.prototype._getResultsFromMypage = function($page) {
       var $item, $items, $status, a, i, item, results, ret, status, _i, _len;
-
       $items = $page.find('#liveItemsWrap .liveItems .column');
       results = [];
       for (i = _i = 0, _len = $items.length; _i < _len; i = ++_i) {
@@ -1991,7 +1928,8 @@
     __extends(Official, _super);
 
     function Official(config) {
-      this._fetchFromRankSuccess = __bind(this._fetchFromRankSuccess, this);      Official.__super__.constructor.call(this, 'official', config);
+      this._fetchFromRankSuccess = __bind(this._fetchFromRankSuccess, this);
+      Official.__super__.constructor.call(this, 'official', config);
     }
 
     Official.prototype.updateData = function() {
@@ -2007,7 +1945,6 @@
 
     Official.prototype._fetchFromRankSuccess = function(response) {
       var $page, error, results;
-
       try {
         $page = $($.parseHTML(common.transIMG(response)));
         results = this._getResultsFromRank($page);
@@ -2023,7 +1960,6 @@
 
     Official.prototype._getResultsFromRank = function($page) {
       var $item, item, results, ret, _i, _len, _ref1;
-
       results = [];
       _ref1 = $page.find('#official_ranking_main .ranking_video');
       for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
@@ -2048,10 +1984,8 @@
 
     Official.prototype._fetchFromComingsoonSuccess = function(index, results) {
       var _this = this;
-
       return function(response) {
         var error, streamList, total;
-
         try {
           streamList = response.reserved_stream_list;
           total = response.total;
@@ -2090,7 +2024,6 @@
 
     Official.prototype._getResultsFromComingsoon = function(list, results) {
       var item, ret, _i, _len;
-
       for (_i = 0, _len = list.length; _i < _len; _i++) {
         item = list[_i];
         ret = {};
@@ -2138,7 +2071,6 @@
 
     History.prototype.saveHistory = function(data) {
       var hist;
-
       if (!this.config.isNiconamaEnabled('history')) {
         LOGGER.log('[History] Cancel save history (disable)');
         return false;
@@ -2158,7 +2090,6 @@
 
     History.prototype._getHistory = function() {
       var hist;
-
       hist = localStorage.getItem(bg.History.ID);
       if (!hist) {
         LOGGER.info('[History] First getting history.');
@@ -2180,10 +2111,8 @@
 
     History.prototype._sortHistory = function(hist) {
       var histories, item, key;
-
       histories = (function() {
         var _results;
-
         _results = [];
         for (key in hist) {
           item = hist[key];
@@ -2193,7 +2122,6 @@
       })();
       histories.sort(function(a, b) {
         var at, bt;
-
         at = a.accessTime;
         bt = b.accessTime;
         if (at && bt) {
@@ -2211,7 +2139,6 @@
 
     History.prototype._removeOldHistory = function(hist) {
       var histories, i, id, over, _i, _ref1, _ref2;
-
       histories = this._sortHistory(hist);
       over = histories.length - bg.History.MAX_SIZE;
       if (over <= 0) {

@@ -23,7 +23,6 @@
 
     LivePage.prototype.getCommuUrl = function() {
       var commuUrl, _ref1;
-
       commuUrl = (_ref1 = $('.com,.chan')) != null ? _ref1.find('.smn a').prop('href') : void 0;
       if (commuUrl) {
         if ($('#gates').length) {
@@ -44,7 +43,6 @@
 
     LivePage.prototype.getCommuIdFromUrl = function(url) {
       var _ref1;
-
       if (url) {
         return (_ref1 = url.match(/\/((ch|co)\d+)/)) != null ? _ref1[1] : void 0;
       }
@@ -53,7 +51,6 @@
 
     LivePage.prototype.getLiveId = function() {
       var id, url;
-
       id = this.getLiveIdFromUrl(location.href);
       if (!id) {
         url = $('meta[property="og:url"]').attr('content');
@@ -64,13 +61,11 @@
 
     LivePage.prototype.getLiveIdFromUrl = function(url) {
       var _ref1;
-
       return (_ref1 = url.match(/(watch|gate)\/(lv\d+)/)) != null ? _ref1[2] : void 0;
     };
 
     LivePage.prototype.validate = function() {
       var msg;
-
       msg = [];
       if (!this.commuUrl) {
         msg.push('Community URL is not exists.');
@@ -140,7 +135,6 @@
 
     AutoAction.prototype.render = function() {
       var tpl;
-
       tpl = aujmp.AutoAction.TPL;
       if (this.livePage.isPageTypeLive()) {
         $('#watch_player_top_box').after(tpl);
@@ -163,7 +157,6 @@
 
     function AutoJump($el, livePage, config) {
       var error;
-
       this.$el = $el;
       this.livePage = livePage;
       this.config = config;
@@ -220,7 +213,6 @@
 
     AutoJump.prototype.setUpCheckTimer = function() {
       var time;
-
       time = this.config.autoJumpIntervalSec * 1000;
       this.checkTimer = setInterval(this.checkNextOnair, time);
       return this;
@@ -250,7 +242,6 @@
     AutoJump.prototype.checkNextOnair = function() {
       var url,
         _this = this;
-
       if (this.isCurrentLiveClosed) {
         this.jumpNextOnair();
         return;
@@ -259,7 +250,6 @@
       LOGGER.info("[niconama-arena][AutoJump] HTTP Request(checkNextOnair): " + url);
       common.httpRequest(url, function(response) {
         var $res, errorcode;
-
         $res = $($.parseHTML(common.transIMG(response)));
         errorcode = $res.find('error code').text();
         LOGGER.info("[niconama-arena][AutoJump] errorcode = " + errorcode);
@@ -276,12 +266,10 @@
     AutoJump.prototype.jumpNextOnair = function() {
       var url,
         _this = this;
-
       url = this.livePage.commuUrl;
       LOGGER.info("[niconama-arena][AutoJump] HTTP Request(jumpNextOnair): " + url);
       common.httpRequest(url, function(response) {
         var $res, nowLiveId, nowLiveUrl;
-
         $res = $($.parseHTML(common.transIMG(response)));
         nowLiveUrl = $res.find('#now_live a').first().attr('href');
         if (!nowLiveUrl) {
@@ -354,7 +342,6 @@
 
     function OpentabStatus($el, livePage, config) {
       var error;
-
       this.$el = $el;
       this.livePage = livePage;
       this.config = config;
@@ -371,7 +358,6 @@
 
     OpentabStatus.prototype.validate = function() {
       var error;
-
       error = this.livePage.validate();
       if (error) {
         return error;
@@ -389,7 +375,6 @@
 
     OpentabStatus.prototype.render = function() {
       var html;
-
       if (this.livePage.isPageTypeLive()) {
         this.$el.addClass('auto-jump-live');
       } else if (this.livePage.isPageTypeGate()) {
@@ -407,14 +392,12 @@
 
     OpentabStatus.prototype.getOpentabStatus = function() {
       var _this = this;
-
       chrome.runtime.sendMessage({
         'target': 'config',
         'action': 'getOpentabStatus',
         'args': [this.livePage.commuId]
       }, function(response) {
         var status;
-
         status = response.res;
         _this.showOpentabStatus(status);
         _this.$toggleButton.on('click', _this.onToggleButton);
@@ -423,7 +406,6 @@
 
     OpentabStatus.prototype.showOpentabStatus = function(status) {
       var className, map, msg;
-
       LOGGER.log("[niconama-arena][OpentabStatus] Show opentab status: " + status);
       if (this.config.isRuleBlackList) {
         map = aujmp.OpentabStatus.OPENTAB_STATUS_BLACK_LIST;
@@ -439,7 +421,6 @@
 
     OpentabStatus.prototype.onToggleButton = function(event) {
       var className, key, map, value;
-
       event.preventDefault();
       className = this.$toggleButton.attr('class');
       if (this.config.isRuleBlackList) {
@@ -460,7 +441,6 @@
 
     OpentabStatus.prototype.saveOpentabStatus = function(status) {
       var _this = this;
-
       chrome.runtime.sendMessage({
         'target': 'config',
         'action': 'setOpentabStatus',
@@ -480,7 +460,6 @@
 
     function AutoEnter($el, livePage, config) {
       var error;
-
       this.$el = $el;
       this.livePage = livePage;
       this.config = config;
@@ -545,7 +524,6 @@
 
     function History(livePage, config) {
       var error, id;
-
       this.livePage = livePage;
       this.config = config;
       id = this.livePage.liveId;
@@ -576,7 +554,6 @@
 
     History.prototype.init = function() {
       var error;
-
       if (this.livePage.isPageTypeGate()) {
         this.setLiveDataForGate();
       } else if (this.livePage.isPageTypeLive()) {
@@ -596,7 +573,6 @@
 
     History.prototype.setLiveDataForGate = function() {
       var dateStr, endDateStr, endTimeMatch, endTimeStr, endYearStr, openTimeStr, startTimeStr, time, timeMatch, yearStr;
-
       LOGGER.info("[niconama-arena][History] Saving history in gate page: " + this.liveData.id);
       this.liveData.title = $('.infobox h2 > span:first').text().trim();
       this.liveData.thumnail = $('#bn_gbox > .bn > meta').attr('content');
@@ -622,7 +598,6 @@
 
     History.prototype.setLiveDataForLive = function() {
       var dateStr, openTimeStr, startTimeStr, time, timeMatch, yearStr;
-
       LOGGER.info("[niconama-arena][History] Saving history in live page: " + this.liveData.id);
       this.liveData.title = $('#watch_title_box .box_inner .title_text').text().trim();
       this.liveData.thumnail = $('#watch_title_box .box_inner .thumb_area img:first').attr('src');
@@ -641,7 +616,6 @@
 
     History.prototype.validateData = function() {
       var msg;
-
       msg = [];
       if (!this.liveData.title) {
         msg.push("Title does not exist.");
@@ -659,7 +633,6 @@
 
     History.prototype.saveHistory = function() {
       var _this = this;
-
       LOGGER.info("[niconama-arena][History] Save history", this.liveData);
       chrome.runtime.sendMessage({
         'target': 'history',
@@ -667,7 +640,6 @@
         'args': [this.liveData]
       }, function(response) {
         var res;
-
         res = response.res;
         LOGGER.info("[niconama-arena][History] Saved history", res);
       });
@@ -680,7 +652,6 @@
 
   init = function() {
     var run, watchUrl;
-
     if ($('#zero_lead').length) {
       LOGGER.info('[niconama-arena] No avairable nico_arena on Harajuku.');
       return;
@@ -696,7 +667,6 @@
     }
     run = function(config) {
       var AUTO_ACTION, HISTORY, livePage;
-
       livePage = new aujmp.LivePage;
       LOGGER.info('[niconama-arena] Live page info = ', livePage);
       if (config.enableHistory) {
@@ -710,7 +680,6 @@
       'args': []
     }, function(response) {
       var config;
-
       config = response.res;
       LOGGER.info('[niconama-arena] Config = ', config);
       run(config);
