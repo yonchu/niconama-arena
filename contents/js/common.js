@@ -60,10 +60,10 @@ this.exports = (_ref = typeof exports !== "undefined" && exports !== null ? expo
     function Logger(level) {
       var methods;
       this.level = isNaN(level) ? common.Logger.DEFAULT_LEVEL : level;
-      console.log("Create Logger: level = " + (this.getLevelName(this.level)));
+      console.log("[Logger] Create Logger: level = " + (this.getLevelName(this.level)));
       methods = this.make();
-      console.log("Available(bind): " + (methods.bind.join(', ')));
-      console.log("Available(apply): " + (methods.apply.join(', ')));
+      console.log("[Logger] Available(bind): " + (methods.bind.join(', ')));
+      console.log("[Logger] Available(apply): " + (methods.apply.join(', ')));
     }
 
     Logger.prototype.getLevelName = function(level) {
@@ -199,7 +199,7 @@ this.exports = (_ref = typeof exports !== "undefined" && exports !== null ? expo
     }
 
     AjaxEx.ajax = function(request) {
-      return (new common.AjaxEx(request)).ajax(request);
+      return new common.AjaxEx().ajax(request);
     };
 
     AjaxEx.prototype.ajax = function(request) {

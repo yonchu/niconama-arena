@@ -20,7 +20,7 @@ bg.Background = class Background
       if sender.tab
         logmsg = "[Background] Received message from a content script: #{sender.tab.url}"
       else
-        logmsg = "[Background] Received message  from the extension"
+        logmsg = "[Background] Received message from the extension"
       LOGGER.log logmsg, request, target
       unless target
         throw Error "Invalid target #{request.target}", @commands
@@ -401,7 +401,7 @@ bg.Config = class Config
     return
 
   getAutoJumpIntervalSec: ->
-   return @_getSettingsValue 'autoJumpIntervalSec', 20
+    return @_getSettingsValue 'autoJumpIntervalSec', 20
 
   setAutoJumpIntervalSec: (value) ->
     unless @_isInt value
@@ -486,9 +486,9 @@ bg.LiveChecker = class LiveChecker
     @_initEventListeners()
 
   _initEventListeners: ->
-    time = bg.LiveChecker.CHECK_TIMER_INTERVAL_SEC * 1000
-    LOGGER.log "[LiveChecker] Setup check timer", time
-    setTimeout @_onTimeoutCheck, time
+    time_msec = bg.LiveChecker.CHECK_TIMER_INTERVAL_SEC * 1000
+    LOGGER.log "[LiveChecker] Setup check timer", time_msec
+    setTimeout @_onTimeoutCheck, time_msec
     return
 
   _onTimeoutCheck: =>
@@ -496,10 +496,10 @@ bg.LiveChecker = class LiveChecker
     $.when(
       @badge.run(), @notification.run(), @openTab.run()
     ).always =>
-      LOGGER.log '[LiveChecker] End live check process.'
-      time = bg.LiveChecker.CHECK_TIMER_INTERVAL_SEC * 1000
-      LOGGER.log "[LiveChecker] Setup check timer", time
-      setTimeout @_onTimeoutCheck, time
+      LOGGER.log '[LiveChecker] End live checker process.'
+      time_msec = bg.LiveChecker.CHECK_TIMER_INTERVAL_SEC * 1000
+      LOGGER.log "[LiveChecker] Setup check timer", time_msec
+      setTimeout @_onTimeoutCheck, time_msec
       return
     return
 
@@ -520,7 +520,7 @@ bg.Badge = class Badge
   run: ->
     LOGGER.log '[Badge] Start set badge process.'
     liveDataList = @nicoInfo.liveDataList
-    # Check data error.
+    # Check error in live data.
     for liveData in liveDataList
       if liveData.isError
         LOGGER.warn "[Badge] Set error badge #{liveData.id}"
@@ -915,8 +915,8 @@ bg.BaseLiveData = class BaseLiveData
   ## Common update method.
   update: (force=false, useCache=true) =>
     if not force and @isUpdateRunning
-        LOGGER.warn "[BaseLiveData] Cancel update so it's' already running #{@id}"
-        return false
+      LOGGER.warn "[BaseLiveData] Cancel update so it's already running #{@id}"
+      return false
     unless useCache
       LOGGER.log "[BaseLiveData] Clear cache #{@id}"
       @cache = null
@@ -929,7 +929,7 @@ bg.BaseLiveData = class BaseLiveData
       return false
     return true
 
-  ## Update method for for override.
+  ## Update method for override.
   updateData: ->
     return
 
@@ -943,8 +943,8 @@ bg.BaseLiveData = class BaseLiveData
 
   fetchError: (msg) ->
     return (response) =>
-        @updateError "Fetch error: #{msg}", response
-        msg = null
+      @updateError "Fetch error: #{msg}", response
+      msg = null
       return
 
   updateError: (msg, obj=null) ->
@@ -988,6 +988,7 @@ bg.BaseLiveData = class BaseLiveData
       LOGGER.log "[BaseLiveData] Count badge onair: #{@id} = #{count}"
     return count
 
+  # return
   # {
   #   before: []
   #   gate: []
@@ -1674,12 +1675,12 @@ bg.History = class History
 
 
 ## Main
-exports.config = new bg.Config
-exports.history = new bg.History exports.config
-exports.nicoInfo = new bg.NicoInfo exports.config
-exports.liveChecker = new bg.LiveChecker exports.config, exports.nicoInfo
+exports.my_config = new bg.Config
+exports.my_history = new bg.History exports.my_config
+exports.my_nicoInfo = new bg.NicoInfo exports.my_config
+exports.my_liveChecker = new bg.LiveChecker exports.my_config, exports.my_nicoInfo
 
 exports.background = new bg.Background(
-  config: new bg.ConfigCommands exports.config
-  history: new bg.HistoryCommands exports.history
+  config: new bg.ConfigCommands exports.my_config
+  history: new bg.HistoryCommands exports.my_history
 )

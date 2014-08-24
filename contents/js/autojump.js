@@ -101,9 +101,19 @@
     };
 
     LivePage.prototype.isJoinCommunity = function() {
+      var $ch_button, ch_button_text;
       if (this.isPageTypeLive()) {
         return $('span.favorite,span.favorite_ch_link').length === 0;
       } else if (this.isPageTypeGate()) {
+        $ch_button = $('#ch_button');
+        if ($ch_button.length) {
+          ch_button_text = $ch_button.text();
+          if (ch_button_text.match(/入会/)) {
+            return true;
+          } else if (ch_button_text.match(/更新/)) {
+            return false;
+          }
+        }
         return $('.join a').length === 0;
       }
       return false;
@@ -153,7 +163,7 @@
   aujmp.AutoJump = AutoJump = (function() {
     AutoJump.LIVE_CHECK_URL = 'http://watch.live.nicovideo.jp/api/getplayerstatus?v=';
 
-    AutoJump.TPL = '<input type="checkbox" name="auto-jump" /> 自動枠移動';
+    AutoJump.TPL = '<span><input type="checkbox" name="auto-jump" /> 自動枠移動</span>';
 
     function AutoJump($el, livePage, config) {
       var error;
@@ -440,7 +450,6 @@
     };
 
     OpentabStatus.prototype.saveOpentabStatus = function(status) {
-      var _this = this;
       chrome.runtime.sendMessage({
         'target': 'config',
         'action': 'setOpentabStatus',
@@ -456,7 +465,7 @@
   })();
 
   aujmp.AutoEnter = AutoEnter = (function() {
-    AutoEnter.TPL = '<input type="checkbox" name="auto-enter" /> 自動入場';
+    AutoEnter.TPL = '<span><input type="checkbox" name="auto-enter" /> 自動入場</span>';
 
     function AutoEnter($el, livePage, config) {
       var error;
@@ -632,7 +641,6 @@
     };
 
     History.prototype.saveHistory = function() {
-      var _this = this;
       LOGGER.info("[niconama-arena][History] Save history", this.liveData);
       chrome.runtime.sendMessage({
         'target': 'history',

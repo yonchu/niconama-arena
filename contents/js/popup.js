@@ -2,8 +2,7 @@
   var BaseTab, FavoriteTab, HistoryTab, LOGGER, LiveInfoHtml, LiveTab, OfficialTab, POPUP, Popup, SettingsTab, TabManager, TimeshiftTab, Validator, common, exports, popup, _ref,
     __bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; },
     __hasProp = {}.hasOwnProperty,
-    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; },
-    _this = this;
+    __extends = function(child, parent) { for (var key in parent) { if (__hasProp.call(parent, key)) child[key] = parent[key]; } function ctor() { this.constructor = child; } ctor.prototype = parent.prototype; child.prototype = new ctor(); child.__super__ = parent.prototype; return child; };
 
   exports = (_ref = exports != null ? exports : window) != null ? _ref : this;
 
@@ -881,9 +880,9 @@
 
   $(function() {
     var config, history, nicoInfo, regTab;
-    config = chrome.extension.getBackgroundPage().config;
-    nicoInfo = chrome.extension.getBackgroundPage().nicoInfo;
-    history = chrome.extension.getBackgroundPage().history;
+    config = chrome.extension.getBackgroundPage().my_config;
+    nicoInfo = chrome.extension.getBackgroundPage().my_nicoInfo;
+    history = chrome.extension.getBackgroundPage().my_history;
     POPUP = new popup.Popup(config, nicoInfo);
     regTab = function(tab) {
       if (!config.isNiconamaEnabled(tab.tabId)) {

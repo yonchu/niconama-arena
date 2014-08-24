@@ -28,7 +28,7 @@
         if (sender.tab) {
           logmsg = "[Background] Received message from a content script: " + sender.tab.url;
         } else {
-          logmsg = "[Background] Received message  from the extension";
+          logmsg = "[Background] Received message from the extension";
         }
         LOGGER.log(logmsg, request, target);
         if (!target) {
@@ -651,21 +651,21 @@
     }
 
     LiveChecker.prototype._initEventListeners = function() {
-      var time;
-      time = bg.LiveChecker.CHECK_TIMER_INTERVAL_SEC * 1000;
-      LOGGER.log("[LiveChecker] Setup check timer", time);
-      setTimeout(this._onTimeoutCheck, time);
+      var time_msec;
+      time_msec = bg.LiveChecker.CHECK_TIMER_INTERVAL_SEC * 1000;
+      LOGGER.log("[LiveChecker] Setup check timer", time_msec);
+      setTimeout(this._onTimeoutCheck, time_msec);
     };
 
     LiveChecker.prototype._onTimeoutCheck = function() {
       var _this = this;
       LOGGER.log('[LiveChecker] Start live checker process.');
       $.when(this.badge.run(), this.notification.run(), this.openTab.run()).always(function() {
-        var time;
-        LOGGER.log('[LiveChecker] End live check process.');
-        time = bg.LiveChecker.CHECK_TIMER_INTERVAL_SEC * 1000;
-        LOGGER.log("[LiveChecker] Setup check timer", time);
-        setTimeout(_this._onTimeoutCheck, time);
+        var time_msec;
+        LOGGER.log('[LiveChecker] End live checker process.');
+        time_msec = bg.LiveChecker.CHECK_TIMER_INTERVAL_SEC * 1000;
+        LOGGER.log("[LiveChecker] Setup check timer", time_msec);
+        setTimeout(_this._onTimeoutCheck, time_msec);
       });
     };
 
@@ -1203,7 +1203,7 @@
         useCache = true;
       }
       if (!force && this.isUpdateRunning) {
-        LOGGER.warn("[BaseLiveData] Cancel update so it's' already running " + this.id);
+        LOGGER.warn("[BaseLiveData] Cancel update so it's already running " + this.id);
         return false;
       }
       if (!useCache) {
@@ -1238,7 +1238,7 @@
       var _this = this;
       return function(response) {
         _this.updateError("Fetch error: " + msg, response);
-        return msg = null;
+        msg = null;
       };
     };
 
@@ -2156,17 +2156,17 @@
 
   })();
 
-  exports.config = new bg.Config;
+  exports.my_config = new bg.Config;
 
-  exports.history = new bg.History(exports.config);
+  exports.my_history = new bg.History(exports.my_config);
 
-  exports.nicoInfo = new bg.NicoInfo(exports.config);
+  exports.my_nicoInfo = new bg.NicoInfo(exports.my_config);
 
-  exports.liveChecker = new bg.LiveChecker(exports.config, exports.nicoInfo);
+  exports.my_liveChecker = new bg.LiveChecker(exports.my_config, exports.my_nicoInfo);
 
   exports.background = new bg.Background({
-    config: new bg.ConfigCommands(exports.config),
-    history: new bg.HistoryCommands(exports.history)
+    config: new bg.ConfigCommands(exports.my_config),
+    history: new bg.HistoryCommands(exports.my_history)
   });
 
 }).call(this);

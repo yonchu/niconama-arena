@@ -9,7 +9,7 @@ ntf = exports.namespace 'CHEX.ntf'
 
 ntf.Notification = class Notification
   constructor: ->
-    @liveChecker = chrome.extension.getBackgroundPage().liveChecker
+    @liveChecker = chrome.extension.getBackgroundPage().my_liveChecker
     $ =>
       @init()
       return

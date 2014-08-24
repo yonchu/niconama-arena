@@ -7,7 +7,6 @@
   cursor: auto;
   vertical-align: middle;
   margin-bottom: 5px;
-  margin-left: 20px;
   padding: 3px 5px;
   color: #FFF !important;
   text-decoration: none !important;
@@ -34,6 +33,9 @@
 #auto-action > div {
   width: 960px;
   margin: auto;
+}
+#auto-action > div > span {
+  margin-right: 20px;
 }
 #auto-action.auto-jump-live,
 #auto-action.auto-jump-gate,

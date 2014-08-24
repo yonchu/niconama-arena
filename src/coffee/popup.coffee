@@ -301,8 +301,8 @@ popup.LiveInfoHtml = class LiveInfoHtml
           status = "開場まであと #{common.remainingTime @now, openTime}"
           flags.push 'long-before'
       else if @now < startTime
-          status = "開始まであと #{common.remainingTime @now, startTime}"
-          flags.push 'long-before'
+        status = "開始まであと #{common.remainingTime @now, startTime}"
+        flags.push 'long-before'
     # Set status.
     @html.status = status
     # Set flag.
@@ -703,10 +703,10 @@ popup.SettingsTab = class SettingsTab extends popup.BaseTab
 
 
 POPUP = null
-$ =>
-  config = chrome.extension.getBackgroundPage().config
-  nicoInfo = chrome.extension.getBackgroundPage().nicoInfo
-  history = chrome.extension.getBackgroundPage().history
+$ ->
+  config = chrome.extension.getBackgroundPage().my_config
+  nicoInfo = chrome.extension.getBackgroundPage().my_nicoInfo
+  history = chrome.extension.getBackgroundPage().my_history
   POPUP = new popup.Popup config, nicoInfo
   regTab = (tab) ->
     unless config.isNiconamaEnabled tab.tabId

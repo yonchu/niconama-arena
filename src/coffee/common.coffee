@@ -44,10 +44,10 @@ do (exports=@) ->
 
     constructor: (level) ->
       @level = if isNaN level then common.Logger.DEFAULT_LEVEL else level
-      console.log "Create Logger: level = #{@getLevelName @level}"
+      console.log "[Logger] Create Logger: level = #{@getLevelName @level}"
       methods = @make()
-      console.log "Available(bind): #{methods.bind.join ', '}"
-      console.log "Available(apply): #{methods.apply.join ', '}"
+      console.log "[Logger] Available(bind): #{methods.bind.join ', '}"
+      console.log "[Logger] Available(apply): #{methods.apply.join ', '}"
 
     getLevelName: (level) ->
       for name, val of common.Logger.LEVEL
@@ -153,7 +153,7 @@ do (exports=@) ->
 
     # === Public methods.
     @ajax: (request) ->
-      return (new common.AjaxEx request).ajax request
+      return new common.AjaxEx().ajax request
 
     ajax: (@request) ->
       @defer = $.Deferred()
@@ -244,6 +244,7 @@ do (exports=@) ->
     _call: (callback, callbackObj, data) ->
       callback.apply callbackObj, data
       return
+
 
   common.getLiveIdFromUrl = (url) ->
     url.match(/(watch|gate)\/(lv\d+)/)?[2]

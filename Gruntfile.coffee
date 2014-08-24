@@ -28,45 +28,45 @@ module.exports = (grunt) ->
         options:
           sourceMap: false
         files: [
-            expand: true,
-            cwd: srcCoffeeDir,
-            src: ['**/*.coffee'],
-            dest: destJsDir,
-            ext: '.js'
-            filter: (path) ->
-              noCwdPath = path.replace reTrimCwd, ''
-              return not (noCwdPath in bare_list)
+          expand: true,
+          cwd: srcCoffeeDir,
+          src: ['**/*.coffee'],
+          dest: destJsDir,
+          ext: '.js'
+          filter: (path) ->
+            noCwdPath = path.replace reTrimCwd, ''
+            return not (noCwdPath in bare_list)
         ]
       compileBare:
         options:
           bare: true,
           sourceMap: false
         files: [
-            expand: true,
-            cwd: srcCoffeeDir,
-            src: bare_list,
-            dest: destJsDir,
-            ext: '.js'
+          expand: true,
+          cwd: srcCoffeeDir,
+          src: bare_list,
+          dest: destJsDir,
+          ext: '.js'
         ]
 
     less:
       development:
         files: [
-            expand: true,
-            cwd: srcLessDir,
-            src: ['**/*.less'],
-            dest: destCssDir,
-            ext: '.css'
+          expand: true,
+          cwd: srcLessDir,
+          src: ['**/*.less'],
+          dest: destCssDir,
+          ext: '.css'
         ]
       production:
         options:
           yuicompress: true
         files: [
-            expand: true,
-            cwd: srcLessDir,
-            src: ['**/*.less'],
-            dest: destCssDir,
-            ext: '.css'
+          expand: true,
+          cwd: srcLessDir,
+          src: ['**/*.less'],
+          dest: destCssDir,
+          ext: '.css'
         ]
 
     uglify:
@@ -76,12 +76,12 @@ module.exports = (grunt) ->
             fileName.replace /\.js$/, '.js.map'
           banner: '<%= meta.banner %>'
         files: [
-            expand: true,
-            cwd: destJsDir,
-            src: ['**/*.js'],
-            dest: compressJsDir,
-            filter: (path) ->
-              return not (path.match 'js/lib/vendor/')
+          expand: true,
+          cwd: destJsDir,
+          src: ['**/*.js'],
+          dest: compressJsDir,
+          filter: (path) ->
+            return not (path.match 'js/lib/vendor/')
         ]
 
     regarde:
@@ -93,9 +93,8 @@ module.exports = (grunt) ->
         tasks: ['less:development']
 
     jshint:
-      options: {
+      options:
         jshintrc: '.jshintrc'
-      },
       all:
         src: [
           "#{destJsDir}**/*.js"

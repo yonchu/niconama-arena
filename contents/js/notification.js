@@ -12,7 +12,7 @@
   ntf.Notification = Notification = (function() {
     function Notification() {
       var _this = this;
-      this.liveChecker = chrome.extension.getBackgroundPage().liveChecker;
+      this.liveChecker = chrome.extension.getBackgroundPage().my_liveChecker;
       $(function() {
         _this.init();
       });

@@ -83,6 +83,13 @@ aujmp.LivePage = class LivePage
     if @isPageTypeLive()
       return $('span.favorite,span.favorite_ch_link').length is 0
     else if @isPageTypeGate()
+      $ch_button = $('#ch_button')
+      if $ch_button.length
+        ch_button_text = $ch_button.text()
+        if ch_button_text.match /入会/
+          return true
+        else if ch_button_text.match /更新/
+          return false
       return $('.join a').length is 0
     return false
 
@@ -123,7 +130,7 @@ aujmp.AutoJump = class AutoJump
   # http://live.nicovideo.jp/api/getplayerstatus?v=lv
   @LIVE_CHECK_URL: 'http://watch.live.nicovideo.jp/api/getplayerstatus?v='
 
-  @TPL: '<input type="checkbox" name="auto-jump" /> 自動枠移動'
+  @TPL: '<span><input type="checkbox" name="auto-jump" /> 自動枠移動</span>'
 
   # === Constructor.
   constructor: (@$el, @livePage, @config) ->
@@ -238,8 +245,8 @@ aujmp.AutoJump = class AutoJump
       nowLiveId = nowLiveUrl.match(/watch\/(lv\d+)/)[1]
       LOGGER.info "[niconama-arena][AutoJump] nowLiveId = #{nowLiveId}"
       if nowLiveId isnt @livePage.liveId
-          # Move to new live page.
-          location.replace nowLiveUrl
+        # Move to new live page.
+        location.replace nowLiveUrl
       return @
     return @
 
@@ -329,14 +336,14 @@ aujmp.OpentabStatus = class OpentabStatus
 
   getOpentabStatus: ->
     chrome.runtime.sendMessage({
-        'target' : 'config',
-        'action' : 'getOpentabStatus',
-        'args'   : [@livePage.commuId]
-      }, (response) =>
-        status = response.res
-        @showOpentabStatus status
-        @$toggleButton.on 'click', @onToggleButton
-        return
+      'target' : 'config',
+      'action' : 'getOpentabStatus',
+      'args'   : [@livePage.commuId]
+    }, (response) =>
+      status = response.res
+      @showOpentabStatus status
+      @$toggleButton.on 'click', @onToggleButton
+      return
     )
     return
 
@@ -368,19 +375,19 @@ aujmp.OpentabStatus = class OpentabStatus
 
   saveOpentabStatus: (status) ->
     chrome.runtime.sendMessage({
-        'target' : 'config',
-        'action' : 'setOpentabStatus',
-        'args'   : [@livePage.commuId, status]
-      }, (response) =>
-        LOGGER.log '[niconama-arena][OpentabStatus] Saved opentab status', response
-        return
+      'target' : 'config',
+      'action' : 'setOpentabStatus',
+      'args'   : [@livePage.commuId, status]
+    }, (response) ->
+      LOGGER.log '[niconama-arena][OpentabStatus] Saved opentab status', response
+      return
     )
     return @
 
 
 aujmp.AutoEnter = class AutoEnter
   # === Class variables.
-  @TPL: '<input type="checkbox" name="auto-enter" /> 自動入場'
+  @TPL: '<span><input type="checkbox" name="auto-enter" /> 自動入場</span>'
 
   # === Constructor.
   constructor: (@$el, @livePage, @config) ->
@@ -534,13 +541,13 @@ aujmp.History = class History
   saveHistory: ->
     LOGGER.info "[niconama-arena][History] Save history", @liveData
     chrome.runtime.sendMessage({
-        'target' : 'history',
-        'action' : 'saveHistory',
-        'args'   : [@liveData]
-      }, (response) =>
-        res = response.res
-        LOGGER.info "[niconama-arena][History] Saved history", res
-        return
+      'target' : 'history',
+      'action' : 'saveHistory',
+      'args'   : [@liveData]
+    }, (response) ->
+      res = response.res
+      LOGGER.info "[niconama-arena][History] Saved history", res
+      return
     )
     return @
 
@@ -573,14 +580,14 @@ init = ->
     return
 
   chrome.runtime.sendMessage({
-      'target' : 'config',
-      'action' : 'getConfigForAutoJump',
-      'args'   : []
-    }, (response) ->
-      config = response.res
-      LOGGER.info '[niconama-arena] Config = ', config
-      run config
-      return
+    'target' : 'config',
+    'action' : 'getConfigForAutoJump',
+    'args'   : []
+  }, (response) ->
+    config = response.res
+    LOGGER.info '[niconama-arena] Config = ', config
+    run config
+    return
   )
   return
 
