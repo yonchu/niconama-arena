@@ -19,9 +19,12 @@
     "grunt-contrib-jshint": "^0.4.3",
     "grunt-contrib-less": "^0.5.2",
     "grunt-contrib-uglify": "^0.2.7",
+    "grunt-newer": "^0.7.0",
     "grunt-notify": "^0.2.20",
     "grunt-regarde": "~0.1.1",
     "jshint": "^1.1.0",
+    "load-grunt-config": "^0.13.1",
+    "time-grunt": "^1.0.0",
     "underscore": "^1.4.4"
   }
 }

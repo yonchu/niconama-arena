@@ -1,4 +1,9 @@
 module.exports = (grunt) ->
+  # Show elapsed time at the end.
+  require('time-grunt')(grunt)
+  # Load all grunt tasks.
+  require('load-grunt-config')(grunt)
+
   srcCoffeeDir = 'src/coffee/'
   destJsDir = 'contents/js/'
   compressJsDir = 'contents/compress/'
@@ -127,15 +132,6 @@ module.exports = (grunt) ->
         src: [
           "#{destCssDir}**/*.css"
         ]
-
-  # Load tasks.
-  grunt.loadNpmTasks 'grunt-notify'
-  grunt.loadNpmTasks 'grunt-regarde'
-  grunt.loadNpmTasks 'grunt-contrib-coffee'
-  grunt.loadNpmTasks 'grunt-contrib-less'
-  grunt.loadNpmTasks 'grunt-contrib-uglify'
-  grunt.loadNpmTasks 'grunt-contrib-jshint'
-  grunt.loadNpmTasks 'grunt-contrib-clean'
 
   # Rename
   # grunt.renameTask('regarde', 'watch');
