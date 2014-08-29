@@ -10,7 +10,7 @@ import json
 
 
 MANIFEST = 'contents/manifest.json'
-CONFIG_FILES = ['package.json', 'component.json']
+CONFIG_FILES = ['package.json', 'bower.json']
 
 
 @task
