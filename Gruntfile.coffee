@@ -104,6 +104,14 @@ module.exports = (grunt) ->
         files:
           src: ["#{srcCoffeeDir}**/*.coffee"]
 
+    jsonlint:
+      all:
+        files:
+          src: [
+            '*.json', '.bowerrc', '.jshintrc',
+            'contents/manifest.json'
+          ]
+
     jshint:
       options:
         jshintrc: '.jshintrc'
@@ -145,8 +153,8 @@ module.exports = (grunt) ->
 
   # Register custom tasks.
   grunt.registerTask 'watch', ['regarde']
-  grunt.registerTask 'build', ['coffeelint', 'coffee', 'less:development']
-  grunt.registerTask 'release', ['coffeelint', 'coffee', 'uglify', 'less:production']
+  grunt.registerTask 'build', ['coffeelint', 'jsonlint', 'coffee', 'less:development']
+  grunt.registerTask 'release', ['coffeelint', 'jsonlint', 'coffee', 'uglify', 'less:production']
 
   # Register default task.
   grunt.registerTask 'default', ['build']
