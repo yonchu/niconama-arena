@@ -97,6 +97,13 @@ module.exports = (grunt) ->
         files: ["#{srcLessDir}**/*.less"],
         tasks: ['less:development']
 
+    coffeelint:
+      options:
+        configFile: 'coffeelint.json'
+      all:
+        files:
+          src: ["#{srcCoffeeDir}**/*.coffee"]
+
     jshint:
       options:
         jshintrc: '.jshintrc'
@@ -138,8 +145,8 @@ module.exports = (grunt) ->
 
   # Register custom tasks.
   grunt.registerTask 'watch', ['regarde']
-  grunt.registerTask 'build', ['coffee', 'less:development']
-  grunt.registerTask 'release', ['coffee', 'uglify', 'less:production']
+  grunt.registerTask 'build', ['coffeelint', 'coffee', 'less:development']
+  grunt.registerTask 'release', ['coffeelint', 'coffee', 'uglify', 'less:production']
 
   # Register default task.
   grunt.registerTask 'default', ['build']
