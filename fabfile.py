@@ -9,8 +9,19 @@ from fabric.colors import green, yellow
 import json
 
 
-MANIFEST = 'contents/manifest.json'
-CONFIG_FILES = ['package.json', 'bower.json']
+VER_UP_SRC = 'contents/manifest.json'
+VER_UP_DEST = ['package.json', 'bower.json']
+
+
+def get_version(fpath, is_abort=True):
+    version = None
+    with open(fpath) as f:
+        j = json.load(f)
+        version = j['version']
+    if not version:
+        if is_abort:
+            abort('Version is not found in {}'.format(fpath))
+    return version
 
 
 @task
@@ -29,21 +40,6 @@ def build():
 
 
 @task
-def bump_up_version():
-    print(green('Bump up version number ...'))
-    version = None
-    with open(MANIFEST) as f:
-        j = json.load(f)
-        version = j['version']
-    if not version:
-        abort('Version is not found in {}'.format(MANIFEST))
-    print(yellow('Change version to "{}".'.format(version)))
-    for fname in CONFIG_FILES:
-        local('sed -i "" -e \'s/"version": *"\([0-9.]*\)"/'
-              + '"version": "{}"/\' {}'.format(version, fname))
-
-
-@task
 def build_tmpl():
     print(green('Compile coffeescript files for template...'))
     local('coffee -cb scripts/compile-tmpl.coffee')
@@ -54,8 +50,22 @@ def build_tmpl():
 
 
 @task
+def sync_version():
+    print(green('Sync version (using {}) ...'.format(VER_UP_SRC)))
+    new_ver = get_version(VER_UP_SRC)
+    for fpath in VER_UP_DEST:
+        old_ver = get_version(fpath)
+        if old_ver == new_ver:
+            continue
+        print(yellow('Change version from {} to {} in {}.'
+                     .format(old_ver, new_ver, fpath)))
+        local('sed -i "" -e \'s/"version": *"\([0-9.]*\)"/'
+              + '"version": "{}"/\' {}'.format(new_ver, fpath))
+
+
+@task
 def release():
-    bump_up_version()
+    sync_version()
     build_tmpl()
     print(green('Compile main coffeescript/less files with grunt...'))
     local('grunt build')
@@ -64,6 +74,16 @@ def release():
     print(green('Create release archive...'))
     with lcd('contents'):
         local('zip -r ../release.zip ./')
+
+
+@task
+def git_release():
+    print(green('git commit & tag ...'))
+    version = get_version(VER_UP_SRC)
+    local('git commit -a -v -m "Release ver.{}"'.format(version))
+    git_tag = 'git tag -a "{0}" -m "Release ver.{0}"'.format(version)
+    local(git_tag)
+    # local('git push origin --tags')
 
 
 @task

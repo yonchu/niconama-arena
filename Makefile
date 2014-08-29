@@ -1,4 +1,4 @@
-.PHONY: install build release clean clean-all
+.PHONY: install build release git_release clean clean-all
 
 FAB=fab
 
@@ -7,6 +7,9 @@ build:
 
 release:
 	$(FAB) release
+
+git_release:
+	$(FAB) git_release
 
 install:
 	$(FAB) install
